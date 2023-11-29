@@ -22,48 +22,62 @@ bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const userMessage = msg.text;
 
-    // let url = "https://www.instagram.com/reel/C0HASg_MuUn/?igshid=MTc4MmM1YmI2Ng==";
+    // Show typing status
+    bot.sendChatAction(chatId, 'typing');
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-
-    // Set a random user agent
-    const userAgent = randomUseragent.getRandom();
-    await page.setUserAgent(userAgent);
-
-    // Navigate to the URL with the query parameter
-    await page.goto(`${userMessage}`);
-
-    // wait for 5 second and screenshot the page
-    await waitFor(5000);
-
-    // Let's use `page.content()` to get the entire page's HTML
-    // const pageHTML = await page.content();// wait for 5 seconds to ensure the page is fully loaded
-
-    // get all video tags
-    const videoTags = await page.$$('video');
-    console.log('Number of video tags:', videoTags.length);
-
-
-    if (videoTags.length > 0) {
-        // get the first video tag
-        const videoTag = videoTags[0];
-        // get the src attribute
-        const src = await videoTag.evaluate(tag => tag.getAttribute('src'));
-        console.log('Video source:', src);
-
-        // send a message to the chat acknowledging receipt of their message
-        bot.sendMessage(chatId, src);
+    // Process user message
+    if (userMessage === '/start') {
+        bot.sendMessage(chatId, 'Hello! Send me a URL, and I will try to extract and send the video.');
     } else {
-        console.log('No video tag found');
+        let url = userMessage; // Assuming the user sends a URL
 
-        // send a message to the chat acknowledging receipt of their message
-        bot.sendMessage(chatId, 'No video tag found');
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+
+        // Set a random user agent
+        const userAgent = randomUseragent.getRandom();
+        await page.setUserAgent(userAgent);
+
+        try {
+            // Navigate to the URL with the query parameter
+            await page.goto(url);
+
+            // wait for 5 seconds to ensure the page is fully loaded
+            await page.waitForSelector('video', { timeout: 15000 });
+
+            // get all video tags
+            const videoTags = await page.$$('video');
+            console.log('Number of video tags:', videoTags.length);
+
+            if (videoTags.length > 0) {
+                // get the first video tag
+                const videoTag = videoTags[0];
+                // get the src attribute
+                const src = await videoTag.evaluate(tag => tag.getAttribute('src'));
+                console.log('Video source:', src);
+
+                try {
+                    bot.sendVideo(chatId, src);
+                    // Send the video src after sending the video
+                    // bot.sendMessage(chatId, `Here's the video: ${src}`);
+                } catch (error) {
+                    console.error('Error sending video:', error.message);
+                    bot.sendMessage(chatId, 'Error sending video');
+                }
+            } else {
+                console.log('No video tag found');
+
+                // send a message to the chat acknowledging receipt of their message
+                bot.sendMessage(chatId, 'No video tag found');
+            }
+        } catch (error) {
+            console.error('Error:', error.message);
+            bot.sendMessage(chatId, 'Error processing the URL');
+        } finally {
+            // Close the browser
+            await browser.close();
+        }
     }
-
-
-    // Close the browser
-    await browser.close();
 });
 
 // Define a route for the GET request on the root endpoint '/'
