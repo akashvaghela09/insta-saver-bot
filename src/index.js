@@ -4,6 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const puppeteer = require('puppeteer');
 const randomUseragent = require('random-useragent');
+const { domainCleaner } = require('./helper');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -29,7 +30,15 @@ bot.on('message', async (msg) => {
         // send a message to the chat acknowledging receipt of their message
         bot.sendMessage(chatId, welcomeMessage);
     } else {
-        let url = userMessage; // Assuming the user sends a URL
+        let url = userMessage;
+        let urlResponse = domainCleaner(url);
+
+        if (!urlResponse.success) {
+            bot.sendMessage(chatId, urlResponse.data);
+            return;
+        } else {
+            url = urlResponse.data;
+        }
 
         const browser = await puppeteer.launch();
         const page = await browser.newPage();
@@ -72,7 +81,7 @@ bot.on('message', async (msg) => {
             }
         } catch (error) {
             console.error('Error:', error.message);
-            bot.sendMessage(chatId, 'Error processing the URL');
+            bot.sendMessage(chatId, 'Error processing the URL \n\nMake sure the URL is correct and the post is public');
         } finally {
             // Close the browser
             await browser.close();
