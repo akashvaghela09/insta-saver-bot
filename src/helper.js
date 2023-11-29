@@ -9,7 +9,7 @@ const domainCleaner = (url) => {
     try {
         // Check if the URL is a valid Instagram URL
         if (!instagramRegex.test(url)) {
-            throw new Error("Share Instagram Post, Reels, etc.");
+            throw new Error("Please send a valid Instagram URL");
         }
 
         // Return success true and the clean URL
