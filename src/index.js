@@ -53,10 +53,31 @@ bot.on('message', async (msg) => {
 
             // wait for 5 seconds to ensure the page is fully loaded
             await page.waitForSelector('video', { timeout: 15000 });
+            const ulTags = await page.$$('ul');
+            let captionText = '';
 
-            // get all video tags
+            if (ulTags.length > 0) {
+                // Get the first ul tag
+                const firstUlTag = ulTags[0];
+            
+                // Find the immediate child div tag of the first ul tag
+                const divTag = await firstUlTag.$('div');
+            
+                if (divTag) {
+                    // Extract text content from the div element
+                    const divText = await page.evaluate(div => div.textContent, divTag);
+                    captionText = divText.trim();
+                    console.log('Text from the immediate child div: \n\n', divText.trim());
+                } else {
+                    console.log('No immediate child div found for the first ul tag.');
+                }
+            } else {
+                console.log('No ul tags found on the page.');
+            }
+            
+
             const videoTags = await page.$$('video');
-            console.log('Number of video tags:', videoTags.length);
+            console.log('\n\nNumber of video tags:', videoTags.length);
 
             if (videoTags.length > 0) {
                 // get the first video tag
@@ -66,7 +87,11 @@ bot.on('message', async (msg) => {
                 console.log('Video source:', src);
 
                 try {
-                    bot.sendVideo(chatId, src);
+                    await bot.sendVideo(chatId, src);
+
+                    // Send the caption after sending the video
+                    bot.sendMessage(chatId, captionText);
+
                     // Send the video src after sending the video
                     // bot.sendMessage(chatId, `Here's the video: ${src}`);
                 } catch (error) {
