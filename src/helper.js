@@ -20,7 +20,19 @@ const domainCleaner = (url) => {
     }
 }
 
+const extractShortCode = (url) => {
+    // Define a regular expression pattern to match the streamId in the URL
+    const regex = /\/(?:reel|p)\/([a-zA-Z0-9_-]+)/;
+
+    // Use the regular expression to match and extract the streamId
+    const match = url.match(regex);
+
+    // Return the extracted streamId or null if not found
+    return match ? match[1] : null;
+}
+
 module.exports = {
     waitFor,
-    domainCleaner
+    domainCleaner,
+    extractShortCode
 };
