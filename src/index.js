@@ -59,22 +59,22 @@ bot.on('message', async (msg) => {
             if (ulTags.length > 0) {
                 // Get the first ul tag
                 const firstUlTag = ulTags[0];
-            
+
                 // Find the immediate child div tag of the first ul tag
                 const divTag = await firstUlTag.$('div');
-            
+
                 if (divTag) {
-                    // Extract text content from the div element
-                    const divText = await page.evaluate(div => div.textContent, divTag);
-                    captionText = divText.trim();
-                    console.log('Text from the immediate child div: \n\n', divText.trim());
+                    const captionTag = await divTag.$('h1');
+                    if (captionTag) {
+                        const captionContent = await captionTag.evaluate(tag => tag.innerText);
+                        captionText = captionContent;
+                    }
                 } else {
                     console.log('No immediate child div found for the first ul tag.');
                 }
             } else {
                 console.log('No ul tags found on the page.');
             }
-            
 
             const videoTags = await page.$$('video');
             console.log('\n\nNumber of video tags:', videoTags.length);
@@ -89,9 +89,10 @@ bot.on('message', async (msg) => {
                 try {
                     await bot.sendVideo(chatId, src);
 
-                    // Send the caption after sending the video
-                    bot.sendMessage(chatId, captionText);
-
+                    if (captionText) {
+                        // Send the caption after sending the video
+                        bot.sendMessage(chatId, captionText);
+                    }
                     // Send the video src after sending the video
                     // bot.sendMessage(chatId, `Here's the video: ${src}`);
                 } catch (error) {
