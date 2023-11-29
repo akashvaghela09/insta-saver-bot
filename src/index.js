@@ -23,7 +23,11 @@ bot.on('message', async (msg) => {
 
     // Process user message
     if (userMessage === '/start') {
-        bot.sendMessage(chatId, 'Hello! Send me a URL, and I will try to extract and send the video.');
+        let first_name = msg.from.first_name || '';
+        let welcomeMessage = `Hi ${first_name}, \nWelcome to InstaSaver Bot! \n\nTo get started, send me the link of Instagram post, Reels, IGTV, etc. to download the video. \n\nHappy downloading!`
+
+        // send a message to the chat acknowledging receipt of their message
+        bot.sendMessage(chatId, welcomeMessage);
     } else {
         let url = userMessage; // Assuming the user sends a URL
 
