@@ -12,10 +12,6 @@ const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
 
-const waitFor = async (ms) => {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-};
-
 // Listen for any kind of message. There are different kinds of
 // messages.
 bot.on('message', async (msg) => {
