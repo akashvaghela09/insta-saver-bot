@@ -13,19 +13,6 @@ const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
 
-const sendVideo = async (chatId, videoUrl) => {
-    try {
-        const response = await axios.post(`https://api.telegram.org/bot${token}/sendVideo`, {
-            chat_id: chatId,
-            video: videoUrl,
-        });
-
-        console.log('Video sent successfully:', response.data);
-    } catch (error) {
-        console.error('Error sending video:', error.response ? error.response.data : error.message);
-    }
-}
-
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -37,7 +24,7 @@ bot.on('message', async (msg) => {
     // Process user message
     if (userMessage === '/start') {
         let first_name = msg.from.first_name || '';
-        let welcomeMessage = `Hi ${first_name}, \nWelcome to Insta Saver Bot! \n\nTo get started, send me the link of Instagram post, Reels, IGTV, etc. to download the video. \n\nHappy downloading!`
+        let welcomeMessage = `Hi ${first_name}, 👋\nWelcome to Insta Saver Bot! \n\nTo get started, send me the link of Instagram post, Reels, IGTV, etc. to download the video. \n\nHappy downloading!`
 
         // send a message to the chat acknowledging receipt of their message
         bot.sendMessage(chatId, welcomeMessage);
@@ -53,7 +40,7 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        console.log("\n-------------------------------------\nDownloading post for: ", shortCode);
+        console.log(`\n-------------------------------------\nDownloading post for: ${shortCode} 📥`);
 
         let streamResponse = await getStreamData(shortCode);
 
@@ -79,13 +66,25 @@ bot.on('message', async (msg) => {
                     // Send the image
                     await bot.sendPhoto(chatId, mediaItem.mediaUrl);
                 } else if (mediaItem.mediaType === 'XDTGraphVideo') {
-                    // Send the video
-                    await sendVideo(chatId, mediaItem.mediaUrl);
+                    try {
+                        // Send the video
+                        await bot.sendVideo(chatId, media.mediaUrl);
+                    } catch (error) {
+                        console.log("Error while sending video =============== \n", error.response.body);
+                        // Send the image
+                        await bot.sendMessage(chatId, "Unable to send video 😢 \nPossibly, it might have exceeded the Bot's upload limit. \n\nPlease download the video from below link: \n" + media.mediaUrl);
+                    }
                 }
             }
         } else if (media.mediaType === 'XDTGraphVideo') {
-            // Send the video
-            await sendVideo(chatId, media.mediaUrl);
+            try {
+                // Send the video
+                await bot.sendVideo(chatId, media.mediaUrl);
+            } catch (error) {
+                console.log("Error while sending video =============== \n", error.response.body);
+                // Send the image
+                await bot.sendMessage(chatId, "Unable to send video 😢 \nPossibly, it might have exceeded the Bot's upload limit. \n\nPlease download the video from below link: \n" + media.mediaUrl);
+            }
         } else if (media.mediaType === 'XDTGraphImage') {
             // Send the image
             await bot.sendPhoto(chatId, media.mediaUrl);
