@@ -2,9 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const app = express();
-const puppeteer = require('puppeteer');
-const randomUseragent = require('random-useragent');
-const { domainCleaner } = require('./helper');
+const { domainCleaner, extractShortCode, timelineResponseCleaner, findMedia } = require('./helper');
+const axios = require("axios");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -40,77 +39,58 @@ bot.on('message', async (msg) => {
             url = urlResponse.data;
         }
 
-        const browser = await puppeteer.launch();
-        const page = await browser.newPage();
+        let shortCode = extractShortCode(url);
+        let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
 
-        // Set a random user agent
-        const userAgent = randomUseragent.getRandom();
-        await page.setUserAgent(userAgent);
+        let ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
 
-        try {
-            // Navigate to the URL with the query parameter
-            await page.goto(url);
+        let streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+        let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
+        let streamList = timelineMedia.edges;
+        // let totalMedia = streamResponse.data.data.user.edge_owner_to_timeline_media.count;
+        // let hasNextPage = timelineMedia.page_info.has_next_page;
+        // let endCursor = timelineMedia.page_info.end_cursor;
 
-            // wait for 5 seconds to ensure the page is fully loaded
-            await page.waitForSelector('video', { timeout: 15000 });
-            const ulTags = await page.$$('ul');
-            let captionText = '';
+        let results = timelineResponseCleaner(streamList);
+        let media = findMedia(results, shortCode);
 
-            if (ulTags.length > 0) {
-                // Get the first ul tag
-                const firstUlTag = ulTags[0];
+        if (media) {
+            // Send 'typing' action
+            bot.sendChatAction(chatId, 'typing');
 
-                // Find the immediate child div tag of the first ul tag
-                const divTag = await firstUlTag.$('div');
+            // Send the 'Downloading post...' message and store the message ID
+            const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post...');
 
-                if (divTag) {
-                    const captionTag = await divTag.$('h1');
-                    if (captionTag) {
-                        const captionContent = await captionTag.evaluate(tag => tag.innerText);
-                        captionText = captionContent;
+            if (media.mediaType === 'GraphSidecar') {
+                // Send the carousel
+                for (let i = 0; i < media.mediaList.length; i++) {
+                    let mediaItem = media.mediaList[i];
+                    if (mediaItem.mediaType === 'GraphImage') {
+                        // Send the image
+                        await bot.sendPhoto(chatId, mediaItem.mediaUrl);
+                    } else if (mediaItem.mediaType === 'GraphVideo') {
+                        // Send the video
+                        await bot.sendVideo(chatId, mediaItem.mediaUrl);
                     }
-                } else {
-                    console.log('No immediate child div found for the first ul tag.');
                 }
-            } else {
-                console.log('No ul tags found on the page.');
+            } else if (media.mediaType === 'GraphVideo') {
+                // Send the video
+                await bot.sendVideo(chatId, media.mediaUrl);
+            } else if (media.mediaType === 'GraphImage') {
+                // Send the image
+                await bot.sendPhoto(chatId, media.mediaUrl);
             }
+            
+            // Delete the 'Downloading video...' message
+            await bot.deleteMessage(chatId, downloadingMessage.message_id);
 
-            const videoTags = await page.$$('video');
-            console.log('\n\nNumber of video tags:', videoTags.length);
+            // Send 'typing' action
+            bot.sendChatAction(chatId, 'typing');
 
-            if (videoTags.length > 0) {
-                // get the first video tag
-                const videoTag = videoTags[0];
-                // get the src attribute
-                const src = await videoTag.evaluate(tag => tag.getAttribute('src'));
-                console.log('Video source:', src);
-
-                try {
-                    await bot.sendVideo(chatId, src);
-
-                    if (captionText) {
-                        // Send the caption after sending the video
-                        bot.sendMessage(chatId, captionText);
-                    }
-                    // Send the video src after sending the video
-                    // bot.sendMessage(chatId, `Here's the video: ${src}`);
-                } catch (error) {
-                    console.error('Error sending video:', error.message);
-                    bot.sendMessage(chatId, 'Error sending video');
-                }
-            } else {
-                console.log('No video tag found');
-
-                // send a message to the chat acknowledging receipt of their message
-                bot.sendMessage(chatId, 'No video tag found');
-            }
-        } catch (error) {
-            console.error('Error:', error.message);
-            bot.sendMessage(chatId, 'Error processing the URL \n\nMake sure the URL is correct and the post is public');
-        } finally {
-            // Close the browser
-            await browser.close();
+            // Send the caption
+            await bot.sendMessage(chatId, media.caption);
+        } else {
+            bot.sendMessage(chatId, 'Bot can only download from the latest 50 posts. \nWe will add support for more posts soon. \n\nThanks for your understanding.');
         }
     }
 });
@@ -118,7 +98,7 @@ bot.on('message', async (msg) => {
 // Define a route for the GET request on the root endpoint '/'
 app.get('/', (req, res) => {
     // Send the response 'Hello' when the endpoint is accessed
-    res.send('Hello');
+    res.send('Hello from InstaSaver Bot!');
 });
 
 app.listen(PORT, () => {
