@@ -96,9 +96,20 @@ const timelineResponseCleaner = (streamList) => {
     return results;
 }
 
+const findMedia = (mediaList, shortCode) => {
+    let media = mediaList.find((media) => media.shortCode === shortCode);
+
+    if (media) {
+        return media;
+    } else {
+        return null;
+    }
+}
+
 module.exports = {
     waitFor,
     domainCleaner,
     extractShortCode,
-    timelineResponseCleaner
+    timelineResponseCleaner,
+    findMedia
 };
