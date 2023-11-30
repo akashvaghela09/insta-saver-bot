@@ -37,11 +37,12 @@ const timelineResponseCleaner = (streamList) => {
     for (let i = 0; i < streamList.length; i++) {
         let media = streamList[i].node;
         let mediaType = media.__typename;
-        let mediaUrl = '';
-        let caption = media.edge_media_to_caption.edges[0].node.text;
-        let ownerId = media.owner.id;
+        let ownerId = media?.owner?.id;
         let shortCode = media.shortcode;
-        let userName = media.owner.username;
+        let userName = media?.owner?.username;
+        let mediaUrl = '';
+        let mediaList = [];
+        let caption = media.edge_media_to_caption?.edges[0]?.node?.text;
 
         switch (mediaType) {
             case 'GraphImage':
@@ -51,20 +52,45 @@ const timelineResponseCleaner = (streamList) => {
                 mediaUrl = media.video_url;
                 break;
             case 'GraphSidecar':
-                mediaUrl = media.edge_sidecar_to_children.edges[0].node.video_url;
+                let list = timelineResponseCleaner(media.edge_sidecar_to_children.edges);
+                mediaList = [...list];
                 break;
             default:
                 mediaUrl = media.display_url;
                 break;
         }
 
-        results.push({
-            mediaUrl,
-            caption,
-            ownerId,
-            shortCode,
-            userName
-        });
+        let resultItem = {}
+
+        if (mediaUrl) {
+            resultItem.mediaUrl = mediaUrl;
+        }
+
+        if (mediaList.length > 0) {
+            resultItem.mediaList = mediaList;
+        }
+
+        if (caption) {
+            resultItem.caption = caption;
+        }
+
+        if (ownerId) {
+            resultItem.ownerId = ownerId;
+        }
+
+        if (shortCode) {
+            resultItem.shortCode = shortCode;
+        }
+
+        if (userName) {
+            resultItem.userName = userName;
+        }
+
+        if (mediaType) {
+            resultItem.mediaType = mediaType;
+        }
+
+        results.push(resultItem);
     }
 
     return results;
