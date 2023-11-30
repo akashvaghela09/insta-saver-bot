@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const app = express();
-const { domainCleaner, extractShortCode, timelineResponseCleaner, findMedia } = require('./helper');
+const { domainCleaner, extractShortCode } = require('./helper');
 const { getStreamData } = require('./apis');
 
 // Set the server to listen on port 6060
@@ -55,12 +55,12 @@ bot.on('message', async (msg) => {
         const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
 
         let media = streamResponse.data;
-        
-        if (media.mediaType === 'GraphSidecar') {
+
+        if (media.mediaType === 'XDTGraphSidecar') {
             // Send the carousel
             for (let i = 0; i < media.mediaList.length; i++) {
                 let mediaItem = media.mediaList[i];
-                if (mediaItem.mediaType === 'GraphImage') {
+                if (mediaItem.mediaType === 'XDTGraphImage') {
                     // Send the image
                     await bot.sendPhoto(chatId, mediaItem.mediaUrl);
                 } else if (mediaItem.mediaType === 'XDTGraphVideo') {
@@ -71,7 +71,7 @@ bot.on('message', async (msg) => {
         } else if (media.mediaType === 'XDTGraphVideo') {
             // Send the video
             await bot.sendVideo(chatId, media.mediaUrl);
-        } else if (media.mediaType === 'GraphImage') {
+        } else if (media.mediaType === 'XDTGraphImage') {
             // Send the image
             await bot.sendPhoto(chatId, media.mediaUrl);
         }
