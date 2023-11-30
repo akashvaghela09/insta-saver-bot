@@ -39,7 +39,7 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        console.log("Downloading post for: ", shortCode);
+        console.log("\n-------------------------------------\nDownloading post for: ", shortCode);
 
         let streamResponse = await getStreamData(shortCode);
 
@@ -52,9 +52,10 @@ bot.on('message', async (msg) => {
         bot.sendChatAction(chatId, 'typing');
 
         // Send the 'Downloading post...' message and store the message ID
-        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
+        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading ⏳');
 
         let media = streamResponse.data;
+        console.log("Media Response ==================== \n\n", media);
 
         if (media.mediaType === 'XDTGraphSidecar') {
             // Send the carousel
@@ -84,6 +85,8 @@ bot.on('message', async (msg) => {
 
         // Send the caption
         await bot.sendMessage(chatId, media.caption);
+
+        return;
     }
 });
 
