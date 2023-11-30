@@ -12,6 +12,22 @@ const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
 
+
+// Create an instance of Axios
+const axiosInstance = axios.create({
+    // Your global configuration options here
+});
+
+// Add a request interceptor to include the cookies in each request
+axiosInstance.interceptors.request.use((config) => {
+    // Include your cookies in the request headers
+    config.headers.cookie = `csrftoken=${encodeURIComponent("VN7OXCzo76L8kDNIAFV50tV33qu2FBrz")}; datr=${encodeURIComponent("9ppDZSaYso-Nc64Wte484DoV")}; ig_did=${encodeURIComponent("ED31654E-87E1-4ED2-8029-8F366D045CE7")}; ig_nrcb=${encodeURIComponent("1")}; mid=${encodeURIComponent("ZUOa-AAEAAHzhxibXoWlMBI1YybO")}`;
+
+    return config;
+}, (error) => {
+    return Promise.reject(error);
+});
+
 // Listen for any kind of message. There are different kinds of
 // messages.
 bot.on('message', async (msg) => {
@@ -43,10 +59,10 @@ bot.on('message', async (msg) => {
         let ownerId = '';
         let streamResponse;
 
-        console.log("Downloading post for: " , shortCode);
+        console.log("Downloading post for: ", shortCode);
 
         try {
-            let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
+            let ownerIdResponse = await axiosInstance.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
             ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
         } catch (error) {
             console.log(error);
@@ -54,10 +70,15 @@ bot.on('message', async (msg) => {
         }
 
         try {
-            streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+            streamResponse = await axiosInstance.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
         } catch (error) {
             console.log(error);
             bot.sendMessage(chatId, 'Something went wrong while fetching timeline. Please try again later.');
+        }
+
+        if (!streamResponse) {
+            bot.sendMessage(chatId, 'Something went wrong while fetching timeline. Please try again later.');
+            return;
         }
 
         let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
@@ -96,7 +117,7 @@ bot.on('message', async (msg) => {
                 // Send the image
                 await bot.sendPhoto(chatId, media.mediaUrl);
             }
-            
+
             // Delete the 'Downloading video...' message
             await bot.deleteMessage(chatId, downloadingMessage.message_id);
 
