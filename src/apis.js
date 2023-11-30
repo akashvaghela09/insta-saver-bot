@@ -21,9 +21,27 @@ const getOwnerId = async (shortCode) => {
     return response;
 };
 
-const getStreamData = async () => { };
+const getTimelineData = async (ownerId) => {
+
+    let response = {
+        success: false,
+        data: null
+    }
+
+    try {
+        let streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+        response.success = true;
+        response.data = streamResponse;
+    } catch (error) {
+        console.log(error);
+        response.success = false;
+        response.message = 'Something went wrong while fetching timeline. Please try again later.';
+    }
+
+    return response;
+};
 
 module.exports = {
     getOwnerId,
-    getStreamData
+    getTimelineData
 };
