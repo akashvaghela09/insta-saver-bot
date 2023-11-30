@@ -3,7 +3,7 @@ const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const { domainCleaner, extractShortCode, timelineResponseCleaner, findMedia } = require('./helper');
-const axios = require("axios");
+const { getOwnerId, getTimelineData } = require('./apis');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -44,25 +44,22 @@ bot.on('message', async (msg) => {
 
         console.log("Downloading post for: ", shortCode);
 
-        try {
-            let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
-            ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
-            console.log("Owner ID: ", ownerId);
-        } catch (error) {
-            console.log(error);
-            bot.sendMessage(chatId, 'Something went wrong while fetching ownerID. Please try again later.');
-        }
+        let ownerIdResponse = await getOwnerId(shortCode);
 
-        try {
-            streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
-        } catch (error) {
-            console.log(error);
-            bot.sendMessage(chatId, 'Something went wrong while fetching timeline. Please try again later.');
-        }
-
-        if (!streamResponse) {
-            console.log("Something went wrong while fetching timeline, returning...");
+        if (!ownerIdResponse.success) {
+            bot.sendMessage(chatId, ownerIdResponse.message);
             return;
+        } else {
+            ownerId = ownerIdResponse?.data;
+        }
+
+        let timelineResponse = await getTimelineData(ownerId);
+
+        if (!timelineResponse.success) {
+            bot.sendMessage(chatId, timelineResponse.message);
+            return;
+        } else {
+            streamResponse = timelineResponse?.data;
         }
 
         let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
