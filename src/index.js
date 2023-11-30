@@ -64,6 +64,7 @@ bot.on('message', async (msg) => {
         try {
             let ownerIdResponse = await axiosInstance.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
             ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
+            console.log("Owner ID: ", ownerId);
         } catch (error) {
             console.log(error);
             bot.sendMessage(chatId, 'Something went wrong while fetching ownerID. Please try again later.');
