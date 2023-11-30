@@ -40,13 +40,29 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
+        let ownerId = '';
+        let streamResponse;
 
-        let ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
+        console.log("Downloading post for: " , shortCode);
 
-        let streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+        try {
+            let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
+            ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
+        } catch (error) {
+            console.log(error);
+            bot.sendMessage(chatId, 'Something went wrong while fetching ownerID. Please try again later.');
+        }
+
+        try {
+            streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+        } catch (error) {
+            console.log(error);
+            bot.sendMessage(chatId, 'Something went wrong while fetching timeline. Please try again later.');
+        }
+
         let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
         let streamList = timelineMedia.edges;
+
         // let totalMedia = streamResponse.data.data.user.edge_owner_to_timeline_media.count;
         // let hasNextPage = timelineMedia.page_info.has_next_page;
         // let endCursor = timelineMedia.page_info.end_cursor;
@@ -90,7 +106,7 @@ bot.on('message', async (msg) => {
             // Send the caption
             await bot.sendMessage(chatId, media.caption);
         } else {
-            bot.sendMessage(chatId, 'Bot can only download from the latest 50 posts. \nWe will add support for more posts soon. \n\nThanks for your understanding.');
+            bot.sendMessage(chatId, 'Bot can only download from the latest 50 posts. We will add support for more posts soon. \n\nThanks for your understanding.');
         }
     }
 });
