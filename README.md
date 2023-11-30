@@ -44,6 +44,15 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
     2. Old post support not available (not implemented!).
     3. Requires multiple API calls and loops through every post from the timeline to match and return content (originally  in the future scope).
 
+#### v0.1.3
+- Resolves all previous issues like rate limiting, timeout error etc.
+- Only requires short code to fetch post content.
+- Faster response compared to previous versions, as only necessary calls to Instagram servers are made.
+- Steps:
+    - Extract shortCode from post URL.
+    - POST request for desired content with all required headers and cookies.
+    - Extract post content and caption from json response.
+
 ### How to Set Up Locally
 
 1. **Clone Repository:**
