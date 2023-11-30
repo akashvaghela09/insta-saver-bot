@@ -24,7 +24,7 @@ bot.on('message', async (msg) => {
     // Process user message
     if (userMessage === '/start') {
         let first_name = msg.from.first_name || '';
-        let welcomeMessage = `Hi ${first_name}, \nWelcome to InstaSaver Bot! \n\nTo get started, send me the link of Instagram post, Reels, IGTV, etc. to download the video. \n\nHappy downloading!`
+        let welcomeMessage = `Hi ${first_name}, \nWelcome to Insta Saver Bot! \n\nTo get started, send me the link of Instagram post, Reels, IGTV, etc. to download the video. \n\nHappy downloading!`
 
         // send a message to the chat acknowledging receipt of their message
         bot.sendMessage(chatId, welcomeMessage);
@@ -59,7 +59,7 @@ bot.on('message', async (msg) => {
             bot.sendChatAction(chatId, 'typing');
 
             // Send the 'Downloading post...' message and store the message ID
-            const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post...');
+            const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
 
             if (media.mediaType === 'GraphSidecar') {
                 // Send the carousel
