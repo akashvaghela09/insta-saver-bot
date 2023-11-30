@@ -13,7 +13,7 @@ The Insta Saver Bot is a versatile tool (Telegram bot) designed to simplify the 
 ********
 
 ### Bot URL
-Try on Telegram: [Insta Saver Bot](https://t.me/what_the_date_bot)
+Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
 
 ### Features
 
