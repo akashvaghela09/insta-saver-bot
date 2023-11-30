@@ -23,7 +23,8 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
 
 ### Future Scope
 
-1. **Extended Post Limit:** Currently supporting the download of the latest 50 posts, the bot's capabilities will be expanded to include a broader range of recent content in future updates.
+- Incorporating support for age-restricted content.
+- Implementing user sessions and Instagram account login functionality.
 
 ### Changelog
 
