@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { edgeListCleaner } = require('./helper');
 
 const getOwnerId = async (shortCode) => {
 
@@ -104,12 +105,23 @@ const getStreamData = async (shortCode) => {
     try {
         const response = await axios.post(url, data, { headers });
         let responseData = response.data;
+        let mediaType = responseData.data.xdt_shortcode_media.__typename;
+        let displayUrl = responseData.data.xdt_shortcode_media.display_url;
+        let videoUrl = responseData.data.xdt_shortcode_media.video_url;
+        let captionText = responseData.data.xdt_shortcode_media.edge_media_to_caption.edges[0].node.text; 
 
         returnResponse.success = true;
-        returnResponse.data.mediaUrl = responseData.data.xdt_shortcode_media.video_url;
-        returnResponse.data.displayUrl = responseData.data.xdt_shortcode_media.display_url;
-        returnResponse.data.mediaType = responseData.data.xdt_shortcode_media.__typename;
-        returnResponse.data.caption = responseData.data.xdt_shortcode_media.edge_media_to_caption.edges[0].node.text;
+        returnResponse.data.mediaUrl = videoUrl || displayUrl;
+        returnResponse.data.displayUrl = displayUrl;
+        returnResponse.data.mediaType = mediaType;
+        returnResponse.data.caption = captionText;
+    
+        if(mediaType === 'XDTGraphSidecar') {
+            let edgeList = responseData.data.xdt_shortcode_media.edge_sidecar_to_children.edges;
+            let cleanList = edgeListCleaner(edgeList);
+
+            returnResponse.data.mediaList = cleanList;
+        }
     } catch (error) {
         console.log(error);
 
