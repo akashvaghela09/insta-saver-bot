@@ -104,11 +104,18 @@ const getStreamData = async (shortCode) => {
 
     try {
         const response = await axios.post(url, data, { headers });
-        let responseData = response.data;
-        let mediaType = responseData.data.xdt_shortcode_media.__typename;
-        let displayUrl = responseData.data.xdt_shortcode_media.display_url;
-        let videoUrl = responseData.data.xdt_shortcode_media.video_url;
-        let captionText = responseData.data.xdt_shortcode_media.edge_media_to_caption.edges[0].node.text; 
+        let responseData = response.data.data.xdt_shortcode_media;
+
+        if(!responseData) {
+            returnResponse.success = false;
+            returnResponse.message = 'Content not found. make sure the account is public and post is not age restricted.';
+            return returnResponse;
+        }
+
+        let mediaType = responseData.__typename;
+        let displayUrl = responseData.display_url;
+        let videoUrl = responseData.video_url;
+        let captionText = responseData.edge_media_to_caption.edges[0].node.text; 
 
         returnResponse.success = true;
         returnResponse.data.mediaUrl = videoUrl || displayUrl;
@@ -117,7 +124,7 @@ const getStreamData = async (shortCode) => {
         returnResponse.data.caption = captionText;
     
         if(mediaType === 'XDTGraphSidecar') {
-            let edgeList = responseData.data.xdt_shortcode_media.edge_sidecar_to_children.edges;
+            let edgeList = responseData.edge_sidecar_to_children.edges;
             let cleanList = edgeListCleaner(edgeList);
 
             returnResponse.data.mediaList = cleanList;
