@@ -4,6 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const { domainCleaner, extractShortCode } = require('./helper');
 const { getStreamData } = require('./apis');
+const axios = require('axios');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
