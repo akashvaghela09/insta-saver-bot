@@ -4,6 +4,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const { domainCleaner, extractShortCode } = require('./helper');
 const { getStreamData } = require('./apis');
+const axios = require('axios');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -11,6 +12,19 @@ const PORT = process.env.PORT || 6060;
 const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
+
+const sendVideo = async (chatId, videoUrl) => {
+    try {
+        const response = await axios.post(`https://api.telegram.org/bot${token}/sendVideo`, {
+            chat_id: chatId,
+            video: videoUrl,
+        });
+
+        console.log('Video sent successfully:', response.data);
+    } catch (error) {
+        console.error('Error sending video:', error.response ? error.response.data : error.message);
+    }
+}
 
 // Listen for any kind of message. There are different kinds of messages.
 bot.on('message', async (msg) => {
@@ -39,7 +53,7 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        console.log("Downloading post for: ", shortCode);
+        console.log("\n-------------------------------------\nDownloading post for: ", shortCode);
 
         let streamResponse = await getStreamData(shortCode);
 
@@ -52,9 +66,10 @@ bot.on('message', async (msg) => {
         bot.sendChatAction(chatId, 'typing');
 
         // Send the 'Downloading post...' message and store the message ID
-        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
+        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading ⏳');
 
         let media = streamResponse.data;
+        console.log("Media Response ==================== \n\n", media);
 
         if (media.mediaType === 'XDTGraphSidecar') {
             // Send the carousel
@@ -65,12 +80,12 @@ bot.on('message', async (msg) => {
                     await bot.sendPhoto(chatId, mediaItem.mediaUrl);
                 } else if (mediaItem.mediaType === 'XDTGraphVideo') {
                     // Send the video
-                    await bot.sendVideo(chatId, mediaItem.mediaUrl);
+                    await sendVideo(chatId, mediaItem.mediaUrl);
                 }
             }
         } else if (media.mediaType === 'XDTGraphVideo') {
             // Send the video
-            await bot.sendVideo(chatId, media.mediaUrl);
+            await sendVideo(chatId, media.mediaUrl);
         } else if (media.mediaType === 'XDTGraphImage') {
             // Send the image
             await bot.sendPhoto(chatId, media.mediaUrl);
@@ -84,6 +99,8 @@ bot.on('message', async (msg) => {
 
         // Send the caption
         await bot.sendMessage(chatId, media.caption);
+
+        return;
     }
 });
 
