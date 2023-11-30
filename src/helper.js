@@ -31,7 +31,7 @@ const extractShortCode = (url) => {
     return match ? match[1] : null;
 }
 
-const timelineResponseCleaner = (streamList) => {
+const edgeListCleaner = (streamList) => {
     let results = [];
 
     for (let i = 0; i < streamList.length; i++) {
@@ -45,14 +45,14 @@ const timelineResponseCleaner = (streamList) => {
         let caption = media.edge_media_to_caption?.edges[0]?.node?.text;
 
         switch (mediaType) {
-            case 'GraphImage':
+            case 'XDTGraphImage':
                 mediaUrl = media.display_url;
                 break;
-            case 'GraphVideo':
+            case 'XDTGraphVideo':
                 mediaUrl = media.video_url;
                 break;
-            case 'GraphSidecar':
-                let list = timelineResponseCleaner(media.edge_sidecar_to_children.edges);
+            case 'XDTGraphSidecar':
+                let list = edgeListCleaner(media.edge_sidecar_to_children.edges);
                 mediaList = [...list];
                 break;
             default:
@@ -110,6 +110,6 @@ module.exports = {
     waitFor,
     domainCleaner,
     extractShortCode,
-    timelineResponseCleaner,
+    edgeListCleaner,
     findMedia
 };

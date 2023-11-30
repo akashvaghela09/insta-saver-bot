@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const app = express();
-const { domainCleaner, extractShortCode, timelineResponseCleaner, findMedia } = require('./helper');
-const axios = require("axios");
+const { domainCleaner, extractShortCode } = require('./helper');
+const { getStreamData } = require('./apis');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -12,8 +12,7 @@ const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
 const bot = new TelegramBot(token, { polling: true });
 
-// Listen for any kind of message. There are different kinds of
-// messages.
+// Listen for any kind of message. There are different kinds of messages.
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const userMessage = msg.text;
@@ -40,74 +39,51 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        let ownerId = '';
-        let streamResponse;
+        console.log("Downloading post for: ", shortCode);
 
-        console.log("Downloading post for: " , shortCode);
+        let streamResponse = await getStreamData(shortCode);
 
-        try {
-            let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
-            ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
-        } catch (error) {
-            console.log(error);
-            bot.sendMessage(chatId, 'Something went wrong while fetching ownerID. Please try again later.');
+        if (!streamResponse.success) {
+            bot.sendMessage(chatId, streamResponse.message);
+            return;
         }
 
-        try {
-            streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
-        } catch (error) {
-            console.log(error);
-            bot.sendMessage(chatId, 'Something went wrong while fetching timeline. Please try again later.');
-        }
+        // Send 'typing' action
+        bot.sendChatAction(chatId, 'typing');
 
-        let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
-        let streamList = timelineMedia.edges;
+        // Send the 'Downloading post...' message and store the message ID
+        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
 
-        // let totalMedia = streamResponse.data.data.user.edge_owner_to_timeline_media.count;
-        // let hasNextPage = timelineMedia.page_info.has_next_page;
-        // let endCursor = timelineMedia.page_info.end_cursor;
+        let media = streamResponse.data;
 
-        let results = timelineResponseCleaner(streamList);
-        let media = findMedia(results, shortCode);
-
-        if (media) {
-            // Send 'typing' action
-            bot.sendChatAction(chatId, 'typing');
-
-            // Send the 'Downloading post...' message and store the message ID
-            const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
-
-            if (media.mediaType === 'GraphSidecar') {
-                // Send the carousel
-                for (let i = 0; i < media.mediaList.length; i++) {
-                    let mediaItem = media.mediaList[i];
-                    if (mediaItem.mediaType === 'GraphImage') {
-                        // Send the image
-                        await bot.sendPhoto(chatId, mediaItem.mediaUrl);
-                    } else if (mediaItem.mediaType === 'GraphVideo') {
-                        // Send the video
-                        await bot.sendVideo(chatId, mediaItem.mediaUrl);
-                    }
+        if (media.mediaType === 'XDTGraphSidecar') {
+            // Send the carousel
+            for (let i = 0; i < media.mediaList.length; i++) {
+                let mediaItem = media.mediaList[i];
+                if (mediaItem.mediaType === 'XDTGraphImage') {
+                    // Send the image
+                    await bot.sendPhoto(chatId, mediaItem.mediaUrl);
+                } else if (mediaItem.mediaType === 'XDTGraphVideo') {
+                    // Send the video
+                    await bot.sendVideo(chatId, mediaItem.mediaUrl);
                 }
-            } else if (media.mediaType === 'GraphVideo') {
-                // Send the video
-                await bot.sendVideo(chatId, media.mediaUrl);
-            } else if (media.mediaType === 'GraphImage') {
-                // Send the image
-                await bot.sendPhoto(chatId, media.mediaUrl);
             }
-            
-            // Delete the 'Downloading video...' message
-            await bot.deleteMessage(chatId, downloadingMessage.message_id);
-
-            // Send 'typing' action
-            bot.sendChatAction(chatId, 'typing');
-
-            // Send the caption
-            await bot.sendMessage(chatId, media.caption);
-        } else {
-            bot.sendMessage(chatId, 'Bot can only download from the latest 50 posts. We will add support for more posts soon. \n\nThanks for your understanding.');
+        } else if (media.mediaType === 'XDTGraphVideo') {
+            // Send the video
+            await bot.sendVideo(chatId, media.mediaUrl);
+        } else if (media.mediaType === 'XDTGraphImage') {
+            // Send the image
+            await bot.sendPhoto(chatId, media.mediaUrl);
         }
+
+        // Delete the 'Downloading video...' message
+        await bot.deleteMessage(chatId, downloadingMessage.message_id);
+
+        // Send 'typing' action
+        bot.sendChatAction(chatId, 'typing');
+
+        // Send the caption
+        await bot.sendMessage(chatId, media.caption);
     }
 });
 
@@ -118,5 +94,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
