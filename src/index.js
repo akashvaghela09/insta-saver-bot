@@ -3,7 +3,7 @@ const express = require('express');
 const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const { domainCleaner, extractShortCode, timelineResponseCleaner, findMedia } = require('./helper');
-const { getOwnerId, getTimelineData } = require('./apis');
+const { getStreamData } = require('./apis');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -39,77 +39,51 @@ bot.on('message', async (msg) => {
         }
 
         let shortCode = extractShortCode(url);
-        let ownerId = '';
-        let streamResponse;
-
         console.log("Downloading post for: ", shortCode);
 
-        let ownerIdResponse = await getOwnerId(shortCode);
+        let streamResponse = await getStreamData(shortCode);
 
-        if (!ownerIdResponse.success) {
-            bot.sendMessage(chatId, ownerIdResponse.message);
+        if (!streamResponse.success) {
+            bot.sendMessage(chatId, streamResponse.message);
             return;
-        } else {
-            ownerId = ownerIdResponse?.data;
         }
 
-        let timelineResponse = await getTimelineData(ownerId);
+        // Send 'typing' action
+        bot.sendChatAction(chatId, 'typing');
 
-        if (!timelineResponse.success) {
-            bot.sendMessage(chatId, timelineResponse.message);
-            return;
-        } else {
-            streamResponse = timelineResponse?.data;
-        }
+        // Send the 'Downloading post...' message and store the message ID
+        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
 
-        let timelineMedia = streamResponse.data.data.user.edge_owner_to_timeline_media;
-        let streamList = timelineMedia.edges;
-
-        // let totalMedia = streamResponse.data.data.user.edge_owner_to_timeline_media.count;
-        // let hasNextPage = timelineMedia.page_info.has_next_page;
-        // let endCursor = timelineMedia.page_info.end_cursor;
-
-        let results = timelineResponseCleaner(streamList);
-        let media = findMedia(results, shortCode);
-
-        if (media) {
-            // Send 'typing' action
-            bot.sendChatAction(chatId, 'typing');
-
-            // Send the 'Downloading post...' message and store the message ID
-            const downloadingMessage = await bot.sendMessage(chatId, 'Downloading post ...');
-
-            if (media.mediaType === 'GraphSidecar') {
-                // Send the carousel
-                for (let i = 0; i < media.mediaList.length; i++) {
-                    let mediaItem = media.mediaList[i];
-                    if (mediaItem.mediaType === 'GraphImage') {
-                        // Send the image
-                        await bot.sendPhoto(chatId, mediaItem.mediaUrl);
-                    } else if (mediaItem.mediaType === 'GraphVideo') {
-                        // Send the video
-                        await bot.sendVideo(chatId, mediaItem.mediaUrl);
-                    }
+        let media = streamResponse.data;
+        
+        if (media.mediaType === 'GraphSidecar') {
+            // Send the carousel
+            for (let i = 0; i < media.mediaList.length; i++) {
+                let mediaItem = media.mediaList[i];
+                if (mediaItem.mediaType === 'GraphImage') {
+                    // Send the image
+                    await bot.sendPhoto(chatId, mediaItem.mediaUrl);
+                } else if (mediaItem.mediaType === 'XDTGraphVideo') {
+                    // Send the video
+                    await bot.sendVideo(chatId, mediaItem.mediaUrl);
                 }
-            } else if (media.mediaType === 'GraphVideo') {
-                // Send the video
-                await bot.sendVideo(chatId, media.mediaUrl);
-            } else if (media.mediaType === 'GraphImage') {
-                // Send the image
-                await bot.sendPhoto(chatId, media.mediaUrl);
             }
-
-            // Delete the 'Downloading video...' message
-            await bot.deleteMessage(chatId, downloadingMessage.message_id);
-
-            // Send 'typing' action
-            bot.sendChatAction(chatId, 'typing');
-
-            // Send the caption
-            await bot.sendMessage(chatId, media.caption);
-        } else {
-            bot.sendMessage(chatId, 'Bot can only download from the latest 50 posts. We will add support for more posts soon. \n\nThanks for your understanding.');
+        } else if (media.mediaType === 'XDTGraphVideo') {
+            // Send the video
+            await bot.sendVideo(chatId, media.mediaUrl);
+        } else if (media.mediaType === 'GraphImage') {
+            // Send the image
+            await bot.sendPhoto(chatId, media.mediaUrl);
         }
+
+        // Delete the 'Downloading video...' message
+        await bot.deleteMessage(chatId, downloadingMessage.message_id);
+
+        // Send 'typing' action
+        bot.sendChatAction(chatId, 'typing');
+
+        // Send the caption
+        await bot.sendMessage(chatId, media.caption);
     }
 });
 
