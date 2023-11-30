@@ -23,7 +23,8 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
 
 ### Future Scope
 
-1. **Extended Post Limit:** Currently supporting the download of the latest 50 posts, the bot's capabilities will be expanded to include a broader range of recent content in future updates.
+- Incorporating support for age-restricted content.
+- Implementing user sessions and Instagram account login functionality.
 
 ### Changelog
 
@@ -43,6 +44,15 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
     1. Works well locally but encounters a 401 error when deployed due to rate limiting.
     2. Old post support not available (not implemented!).
     3. Requires multiple API calls and loops through every post from the timeline to match and return content (originally  in the future scope).
+
+#### v0.1.3
+- Resolves all previous issues like rate limiting, timeout error etc.
+- Only requires short code to fetch post content.
+- Faster response compared to previous versions, as only necessary calls to Instagram servers are made.
+- Steps:
+    - Extract shortCode from post URL.
+    - POST request for desired content with all required headers and cookies.
+    - Extract post content and caption from json response.
 
 ### How to Set Up Locally
 
