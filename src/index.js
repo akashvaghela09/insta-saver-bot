@@ -72,21 +72,29 @@ bot.on('message', async (msg) => {
         console.log("Media Response ==================== \n\n", media);
 
         if (media.mediaType === 'XDTGraphSidecar') {
-            // Send the carousel
+            // Prepare media url array
+            const mediaGroupUrls = [];
             for (let i = 0; i < media.mediaList.length; i++) {
                 let mediaItem = media.mediaList[i];
                 if (mediaItem.mediaType === 'XDTGraphImage') {
-                    // Send the image
-                    await bot.sendPhoto(chatId, mediaItem.mediaUrl);
+                    // Add image to mediaGroupUrls
+                    mediaGroupUrls.push({ type: 'photo', media: mediaItem.mediaUrl });
                 } else if (mediaItem.mediaType === 'XDTGraphVideo') {
-                    try {
-                        // Send the video
-                        await bot.sendVideo(chatId, media.mediaUrl);
-                    } catch (error) {
-                        console.log("Error while sending video =============== \n", error.response.body);
-                        // Send the image
-                        await bot.sendMessage(chatId, "Unable to send video 😢 \nPossibly, it might have exceeded the Bot's upload limit. \n\nPlease download the video from below link: \n" + media.mediaUrl);
-                    }
+                    // Add video to mediaGroupUrls
+                    mediaGroupUrls.push({ type: 'video', media: mediaItem.mediaUrl });
+                }
+            }
+
+            try {
+                // Send the media group
+                await bot.sendMediaGroup(chatId, mediaGroupUrls);
+                console.log("Media group sent successfully ✅");
+            } catch (error) {
+                let { error_code, parameters } = error?.response?.body;
+                console.log("Error while sending media group:", error?.response?.body);
+
+                if (error_code === 429) {
+                    await bot.sendMessage(chatId, `Oops! Telegram's slowing us down with rate limits 😢. \nGive it ${parameters.retry_after} seconds and try again!`);
                 }
             }
         } else if (media.mediaType === 'XDTGraphVideo') {
@@ -94,7 +102,7 @@ bot.on('message', async (msg) => {
                 // Send the video
                 await bot.sendVideo(chatId, media.mediaUrl);
             } catch (error) {
-                console.log("Error while sending video =============== \n", error.response.body);
+                console.log("Error while sending video =============== \n", error?.response?.body);
                 // Send the image
                 await bot.sendMessage(chatId, "Unable to send video 😢 \nPossibly, it might have exceeded the Bot's upload limit. \n\nPlease download the video from below link: \n" + media.mediaUrl);
             }
