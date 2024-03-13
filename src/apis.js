@@ -48,7 +48,7 @@ const getStreamData = async (shortCode) => {
         success: false,
         data: {}
     };
-    
+
     const url = "https://www.instagram.com/api/graphql";
 
     const headers = {
@@ -106,24 +106,24 @@ const getStreamData = async (shortCode) => {
         const response = await axios.post(url, data, { headers });
         let responseData = response.data.data.xdt_shortcode_media;
 
-        if(!responseData) {
+        if (!responseData) {
             returnResponse.success = false;
             returnResponse.message = 'Content not found. make sure the account is public and post is not age restricted.';
             return returnResponse;
         }
 
-        let mediaType = responseData.__typename;
-        let displayUrl = responseData.display_url;
-        let videoUrl = responseData.video_url;
-        let captionText = responseData.edge_media_to_caption.edges[0].node.text; 
+        let mediaType = responseData?.__typename;
+        let displayUrl = responseData?.display_url;
+        let videoUrl = responseData?.video_url;
+        let captionText = responseData?.edge_media_to_caption?.edges[0]?.node?.text || "";
 
         returnResponse.success = true;
         returnResponse.data.mediaUrl = videoUrl || displayUrl;
         returnResponse.data.displayUrl = displayUrl;
         returnResponse.data.mediaType = mediaType;
         returnResponse.data.caption = captionText;
-    
-        if(mediaType === 'XDTGraphSidecar') {
+
+        if (mediaType === 'XDTGraphSidecar') {
             let edgeList = responseData.edge_sidecar_to_children.edges;
             let cleanList = edgeListCleaner(edgeList);
 
