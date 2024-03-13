@@ -16,7 +16,8 @@ const bot = new TelegramBot(token, { polling: true });
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const userMessage = msg.text;
-    const messagesToDelete = []
+    const isURL = msg.entities && msg.entities.length > 0 && msg.entities[0].type === "url";
+    const messagesToDelete = [];
 
     // Show typing status
     bot.sendChatAction(chatId, 'typing');
@@ -34,7 +35,7 @@ bot.on('message', async (msg) => {
 
         // send a message to the chat acknowledging receipt of their message
         bot.sendMessage(chatId, welcomeMessage);
-    } else {
+    } else if (isURL) {
         // Send the 'Downloading post...' message and store the message ID
         const downloadingMessage = await bot.sendMessage(chatId, 'Gathering content 🔍');
         messagesToDelete.push(downloadingMessage.message_id);
