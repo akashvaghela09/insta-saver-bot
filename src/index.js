@@ -4,7 +4,6 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const { domainCleaner, extractShortCode } = require('./helper');
 const { getStreamData } = require('./apis');
-const axios = require('axios');
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -17,9 +16,16 @@ const bot = new TelegramBot(token, { polling: true });
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const userMessage = msg.text;
+    const messagesToDelete = []
 
     // Show typing status
     bot.sendChatAction(chatId, 'typing');
+
+    const deleteMessages = async (arg) => {
+        messagesToDelete.forEach(async (message) => {
+            await bot.deleteMessage(chatId, message);
+        })
+    }
 
     // Process user message
     if (userMessage === '/start') {
@@ -29,11 +35,16 @@ bot.on('message', async (msg) => {
         // send a message to the chat acknowledging receipt of their message
         bot.sendMessage(chatId, welcomeMessage);
     } else {
+        // Send the 'Downloading post...' message and store the message ID
+        const downloadingMessage = await bot.sendMessage(chatId, 'Gathering content 🔍');
+        messagesToDelete.push(downloadingMessage.message_id);
+
         let url = userMessage;
         let urlResponse = domainCleaner(url);
 
         if (!urlResponse.success) {
             bot.sendMessage(chatId, urlResponse.data);
+            await deleteMessages();
             return;
         } else {
             url = urlResponse.data;
@@ -46,14 +57,16 @@ bot.on('message', async (msg) => {
 
         if (!streamResponse.success) {
             bot.sendMessage(chatId, streamResponse.message);
+            await deleteMessages();
             return;
         }
 
         // Send 'typing' action
         bot.sendChatAction(chatId, 'typing');
 
-        // Send the 'Downloading post...' message and store the message ID
-        const downloadingMessage = await bot.sendMessage(chatId, 'Downloading ⏳');
+        // Send the 'Uploading post...' message and store the message ID
+        const uploadingMessage = await bot.sendMessage(chatId, 'Initiating upload 🚀');
+        messagesToDelete.push(uploadingMessage.message_id);
 
         let media = streamResponse.data;
         console.log("Media Response ==================== \n\n", media);
@@ -90,15 +103,15 @@ bot.on('message', async (msg) => {
             await bot.sendPhoto(chatId, media.mediaUrl);
         }
 
-        // Delete the 'Downloading video...' message
-        await bot.deleteMessage(chatId, downloadingMessage.message_id);
+        if (media.caption) {
+            // Send 'typing' action
+            bot.sendChatAction(chatId, 'typing');
 
-        // Send 'typing' action
-        bot.sendChatAction(chatId, 'typing');
+            // Send the caption
+            await bot.sendMessage(chatId, media.caption);
+        }
 
-        // Send the caption
-        await bot.sendMessage(chatId, media.caption);
-
+        await deleteMessages();
         return;
     }
 });
