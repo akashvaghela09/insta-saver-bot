@@ -131,6 +131,13 @@ app.get('/', (req, res) => {
     res.send('Hello from InstaSaver Bot!');
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Check for Master Backend configuration [OPTIONAL]
+// Check if the module is being run directly
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+    });
+} else {
+    // Export the app instance for importing
+    module.exports = app;
+}
