@@ -145,7 +145,9 @@ const logError = ({
     shortCode,
 }) => {
     const DIVIDER = "\n-------------------------------------\n";
-    const LOG = `\n Code: ${errorCode}\n Description: ${errorDescription}\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
+    const LOG = `\n Code: ${errorCode ? errorCode : ""}\n Description: ${
+        errorDescription ? errorDescription : ""
+    }\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
 
     switch (type) {
         case ERROR_TYPE.RATE_LIMIT:
