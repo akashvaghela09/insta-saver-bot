@@ -1,3 +1,5 @@
+const { SUCCESS_MESSAGE, LOG_TYPE, ERROR_TYPE } = require("./constants");
+
 const waitFor = async (ms) => {
     return new Promise((resolve) => setTimeout(resolve, ms));
 };
@@ -18,7 +20,7 @@ const domainCleaner = (url) => {
         // Return success false and the error message
         return { success: false, data: error.message };
     }
-}
+};
 
 const extractShortCode = (url) => {
     // Define a regular expression pattern to match the streamId in the URL
@@ -29,7 +31,7 @@ const extractShortCode = (url) => {
 
     // Return the extracted streamId or null if not found
     return match ? match[1] : null;
-}
+};
 
 const edgeListCleaner = (streamList) => {
     let results = [];
@@ -40,19 +42,21 @@ const edgeListCleaner = (streamList) => {
         let ownerId = media?.owner?.id;
         let shortCode = media.shortcode;
         let userName = media?.owner?.username;
-        let mediaUrl = '';
+        let mediaUrl = "";
         let mediaList = [];
         let caption = media.edge_media_to_caption?.edges[0]?.node?.text;
 
         switch (mediaType) {
-            case 'XDTGraphImage':
+            case "XDTGraphImage":
                 mediaUrl = media.display_url;
                 break;
-            case 'XDTGraphVideo':
+            case "XDTGraphVideo":
                 mediaUrl = media.video_url;
                 break;
-            case 'XDTGraphSidecar':
-                let list = edgeListCleaner(media.edge_sidecar_to_children.edges);
+            case "XDTGraphSidecar":
+                let list = edgeListCleaner(
+                    media.edge_sidecar_to_children.edges
+                );
                 mediaList = [...list];
                 break;
             default:
@@ -60,7 +64,7 @@ const edgeListCleaner = (streamList) => {
                 break;
         }
 
-        let resultItem = {}
+        let resultItem = {};
 
         if (mediaUrl) {
             resultItem.mediaUrl = mediaUrl;
@@ -94,7 +98,7 @@ const edgeListCleaner = (streamList) => {
     }
 
     return results;
-}
+};
 
 const findMedia = (mediaList, shortCode) => {
     let media = mediaList.find((media) => media.shortCode === shortCode);
@@ -104,12 +108,63 @@ const findMedia = (mediaList, shortCode) => {
     } else {
         return null;
     }
-}
+};
+
+const logMessage = ({ type, userName, chatId, shortCode }) => {
+    const DIVIDER = "\n-------------------------------------\n";
+    const LOG = `\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
+
+    switch (type) {
+        case LOG_TYPE.GROUP:
+            console.log(DIVIDER, SUCCESS_MESSAGE.GROUP, LOG, DIVIDER);
+            break;
+        case LOG_TYPE.VIDEO:
+            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO, LOG, DIVIDER);
+            break;
+        case LOG_TYPE.VIDEO_URL:
+            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
+            break;
+        case LOG_TYPE.PHOTO:
+            console.log(DIVIDER, SUCCESS_MESSAGE.PHOTO, LOG, DIVIDER);
+            break;
+        case LOG_TYPE.PHOTO_URL:
+            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
+            break;
+        default:
+            break;
+    }
+};
+
+const logError = ({
+    type,
+    action,
+    errorCode,
+    errorDescription,
+    userName,
+    chatId,
+    shortCode,
+}) => {
+    const DIVIDER = "\n-------------------------------------\n";
+    const LOG = `\n Code: ${errorCode}\n Description: ${errorDescription}\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
+
+    switch (type) {
+        case ERROR_TYPE.RATE_LIMIT:
+            console.log(DIVIDER, action, ERROR_TYPE.RATE_LIMIT, LOG, DIVIDER);
+            break;
+        case ERROR_TYPE.FAILED:
+            console.log(DIVIDER, action, ERROR_TYPE.FAILED, LOG, DIVIDER);
+            break;
+        default:
+            break;
+    }
+};
 
 module.exports = {
     waitFor,
     domainCleaner,
     extractShortCode,
     edgeListCleaner,
-    findMedia
+    findMedia,
+    logMessage,
+    logError,
 };

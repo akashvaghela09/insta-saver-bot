@@ -34,3 +34,8 @@
 - FIX: Carousal media download issue.
 - UPDATE: Send Corousal media as a group. 
 - ADD: Ignore user files/media from message
+
+### v0.1.5
+- ADD: Logs for message success and errors
+- ADD: Custom methods to handle telegram actions such as sendMessage, deleteMessage for better error handling
+- FIX: Server crash on telegram rate limit error.
