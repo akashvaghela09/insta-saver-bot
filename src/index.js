@@ -15,7 +15,7 @@ const {
 } = require("./telegramActions");
 
 // Set the server to listen on port 6060
-const PORT = process.env.SERVER1_PORT || 6061;
+const PORT = process.env.PORT || 6060;
 
 class ChatContext {
     constructor(chatId, userName, firstName, userMessage) {
@@ -43,7 +43,6 @@ bot.on("message", async (msg) => {
         msg.entities &&
         msg.entities.length > 0 &&
         msg.entities[0].type === "url";
-    const messagesToDelete = [];
     let shortCode = "";
 
     const context = new ChatContext(chatId, userName, firstName, userMessage);
@@ -93,7 +92,10 @@ bot.on("message", async (msg) => {
         await sendChatAction(context);
 
         // Send the 'Uploading post...' message and store the message ID
-        const uploadingMessage = await sendMessage({...context, message: MESSSAGE.INITIATING_UPLOAD});
+        const uploadingMessage = await sendMessage({
+            ...context,
+            message: MESSSAGE.INITIATING_UPLOAD,
+        });
         if (uploadingMessage) {
             context.addMessageId(uploadingMessage.message_id);
         }
@@ -144,7 +146,7 @@ bot.on("message", async (msg) => {
 // Define a route for the GET request on the root endpoint '/'
 app.get("/", (req, res) => {
     // Send the response 'Hello' when the endpoint is accessed
-    res.send("Hello from InstaSaver Bot!");
+    res.send(MESSSAGE.HELLO);
 });
 
 // Check for Master Backend configuration [OPTIONAL]
