@@ -12,7 +12,7 @@ const { getStreamData } = require("./apis");
 const { LOG_TYPE, ERROR_TYPE, ACTION } = require("./constants");
 
 // Set the server to listen on port 6060
-const PORT = process.env.PORT || 6060;
+const PORT = process.env.SERVER1_PORT || 6061;
 
 const token = process.env.TELEGRAM_TOKEN;
 // Create a bot that uses 'polling' to fetch new updates
