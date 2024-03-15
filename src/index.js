@@ -9,7 +9,7 @@ const {
     logError,
 } = require("./helper");
 const { getStreamData } = require("./apis");
-const { LOG_TYPE, ERROR_MESSAGE, ERROR_TYPE, ACTION } = require("./constants");
+const { LOG_TYPE, ERROR_TYPE, ACTION } = require("./constants");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
