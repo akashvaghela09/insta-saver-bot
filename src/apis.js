@@ -1,60 +1,64 @@
-const axios = require('axios');
-const { edgeListCleaner } = require('./helper');
+const axios = require("axios");
+const { edgeListCleaner } = require("./helper");
 
 const getOwnerId = async (shortCode) => {
-
     let response = {
         success: false,
-        data: null
-    }
+        data: null,
+    };
 
     try {
-        let ownerIdResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`);
+        let ownerIdResponse = await axios.get(
+            `https://www.instagram.com/graphql/query/?doc_id=17867389474812335&variables={"include_logged_out":true,"include_reel":false,"shortcode": "${shortCode}"}`
+        );
         let ownerId = ownerIdResponse.data.data.shortcode_media.owner.id;
         response.success = true;
         response.data = ownerId;
     } catch (error) {
         console.log(error);
         response.success = false;
-        response.message = 'Something went wrong while fetching ownerID. Please try again later.';
+        response.message =
+            "Something went wrong while fetching ownerID. Please try again later.";
     }
 
     return response;
 };
 
 const getTimelineData = async (ownerId) => {
-
     let response = {
         success: false,
-        data: null
-    }
+        data: null,
+    };
 
     try {
-        let streamResponse = await axios.get(`https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`);
+        let streamResponse = await axios.get(
+            `https://www.instagram.com/graphql/query/?doc_id=17991233890457762&variables={"id":"${ownerId}","first":50}`
+        );
         response.success = true;
         response.data = streamResponse;
     } catch (error) {
         console.log(error);
         response.success = false;
-        response.message = 'Something went wrong while fetching timeline. Please try again later.';
+        response.message =
+            "Something went wrong while fetching timeline. Please try again later.";
     }
 
     return response;
 };
 
 const getStreamData = async (shortCode) => {
-
     const returnResponse = {
         success: false,
-        data: {}
+        data: {},
     };
 
     const url = "https://www.instagram.com/api/graphql";
 
     const headers = {
-        "Host": "www.instagram.com",
-        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
-        "Accept": "*/*",
+        Host: "www.instagram.com",
+        "User-Agent":
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
+        Accept: "*/*",
         "Accept-Language": "en-US,en;q=0.5",
         "Accept-Encoding": "gzip, deflate, br",
         "Content-Type": "application/x-www-form-urlencoded",
@@ -63,16 +67,16 @@ const getStreamData = async (shortCode) => {
         "X-IG-App-ID": "936619743392459",
         "X-FB-LSD": "AVpms6PPJtI",
         "X-ASBD-ID": "129477",
-        "Origin": "https://www.instagram.com",
-        "DNT": "1",
-        "Connection": "keep-alive",
-        "Referer": `https://www.instagram.com/reel/${shortCode}`,
+        Origin: "https://www.instagram.com",
+        DNT: "1",
+        Connection: "keep-alive",
+        Referer: `https://www.instagram.com/reel/${shortCode}`,
         "Sec-Fetch-Dest": "empty",
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Site": "same-origin",
         "Sec-GPC": "1",
-        "TE": "trailers",
-        "Cookie": "mid=ZUOa-AAEAAHzhxibXoWlMBI1YybO; ig_did=ED31654E-87E1-4ED2-8029-8F366D045CE7; ig_nrcb=1; datr=9ppDZSaYso-Nc64Wte484DoV; rur=\"FRC\\05412913748258\\0541732870355:01f70fd04d8d9729a13a484d8bd2ff883ebbc5671876616d272c893cdd4e857281be1862\"; shbid=\"6261\\05412913748258\\0541732867548:01f7669854f1407cdcce5e21ebf1aa9ec3707d844329abf7b4ed75802647fbda7f803d49\"; shbts=\"1701331548\\05412913748258\\0541732867548:01f7ddf6207f5a0bd33195eb22df72688db83756b6d18201b20c2fd74aca55dadeab4f7b\"; csrftoken=fqJs5shoZJWCvyE9gTsM7l4EimeRV5V3",
+        TE: "trailers",
+        Cookie: 'mid=ZUOa-AAEAAHzhxibXoWlMBI1YybO; ig_did=ED31654E-87E1-4ED2-8029-8F366D045CE7; ig_nrcb=1; datr=9ppDZSaYso-Nc64Wte484DoV; rur="FRC\\05412913748258\\0541732870355:01f70fd04d8d9729a13a484d8bd2ff883ebbc5671876616d272c893cdd4e857281be1862"; shbid="6261\\05412913748258\\0541732867548:01f7669854f1407cdcce5e21ebf1aa9ec3707d844329abf7b4ed75802647fbda7f803d49"; shbts="1701331548\\05412913748258\\0541732867548:01f7ddf6207f5a0bd33195eb22df72688db83756b6d18201b20c2fd74aca55dadeab4f7b"; csrftoken=fqJs5shoZJWCvyE9gTsM7l4EimeRV5V3',
     };
 
     const data = {
@@ -104,18 +108,42 @@ const getStreamData = async (shortCode) => {
 
     try {
         const response = await axios.post(url, data, { headers });
-        let responseData = response.data.data.xdt_shortcode_media;
+        if (
+            response?.status === 200 &&
+            response.data.data === null &&
+            response?.data?.errors?.length > 0
+        ) {
+            let rateLimitExceededError = null;
+
+            for (const error of response.data.errors) {
+                if (error.message === "Rate limit exceeded") {
+                    rateLimitExceededError = error;
+                    break;
+                }
+            }
+
+            if (rateLimitExceededError) {
+                const { message, summary } = rateLimitExceededError;
+                returnResponse.success = false;
+                returnResponse.message = `Something went wrong! \n\nMessage: ${message} \nSummary: ${summary}`;
+                return returnResponse;
+            }
+        }
+
+        let responseData = response?.data?.data?.xdt_shortcode_media;
 
         if (!responseData) {
             returnResponse.success = false;
-            returnResponse.message = 'Content not found. make sure the account is public and post is not age restricted.';
+            returnResponse.message =
+                "Content not found. make sure the account is public and post is not age restricted.";
             return returnResponse;
         }
 
         let mediaType = responseData?.__typename;
         let displayUrl = responseData?.display_url;
         let videoUrl = responseData?.video_url;
-        let captionText = responseData?.edge_media_to_caption?.edges[0]?.node?.text || "";
+        let captionText =
+            responseData?.edge_media_to_caption?.edges[0]?.node?.text || "";
 
         returnResponse.success = true;
         returnResponse.data.mediaUrl = videoUrl || displayUrl;
@@ -123,7 +151,7 @@ const getStreamData = async (shortCode) => {
         returnResponse.data.mediaType = mediaType;
         returnResponse.data.caption = captionText;
 
-        if (mediaType === 'XDTGraphSidecar') {
+        if (mediaType === "XDTGraphSidecar") {
             let edgeList = responseData.edge_sidecar_to_children.edges;
             let cleanList = edgeListCleaner(edgeList);
 
@@ -133,7 +161,8 @@ const getStreamData = async (shortCode) => {
         console.log(error);
 
         returnResponse.success = false;
-        returnResponse.message = 'Something went wrong while fetching stream data. Please try again later.';
+        returnResponse.message =
+            "Something went wrong while fetching stream data. Please try again later.";
     }
 
     return returnResponse;
@@ -142,5 +171,5 @@ const getStreamData = async (shortCode) => {
 module.exports = {
     getOwnerId,
     getTimelineData,
-    getStreamData
+    getStreamData,
 };
