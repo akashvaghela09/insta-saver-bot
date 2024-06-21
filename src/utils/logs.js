@@ -33,7 +33,7 @@ const formatLogMessage = (args) => {
 };
 
 const log = (...args) => {
-    const logDirectory = path.join(__dirname, "logs"); // Define log directory
+    const logDirectory = path.join(__dirname, "./../../logs"); // Define log directory
     const logFileName = path.join(
         logDirectory,
         `${getISTTime().split(" ")[0]}.log`
