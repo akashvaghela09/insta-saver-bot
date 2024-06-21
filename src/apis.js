@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { edgeListCleaner } = require("./helper");
+const { edgeListCleaner } = require("./utils");
 
 const getOwnerId = async (shortCode) => {
     let response = {
