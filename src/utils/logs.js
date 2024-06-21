@@ -20,14 +20,19 @@ const getISTTime = () => {
     return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
 };
 
-// Function to format the log message
+// Helper function to format log messages
 const formatLogMessage = (args) => {
     return args
         .map((arg) => {
-            if (typeof arg === "object") {
+            if (arg instanceof Error) {
+                // Handle Error objects separately
+                return `Error: ${arg.message}\n${arg.stack}`;
+            } else if (typeof arg === "object") {
+                // Stringify objects for better logging
                 return JSON.stringify(arg, null, 2);
+            } else {
+                return arg.toString();
             }
-            return String(arg);
         })
         .join(" ");
 };
