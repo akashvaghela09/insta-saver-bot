@@ -63,9 +63,9 @@ const log = (...args) => {
     console.log(formattedLogMessage);
 };
 
-const logMessage = ({ type, userName, chatId, shortCode }) => {
+const logMessage = ({ type, userName, chatId, requestUrl }) => {
     const DIVIDER = "\n-------------------------------------\n";
-    const LOG = `\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
+    const LOG = `\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${requestUrl}`;
 
     switch (type) {
         case LOG_TYPE.GROUP:
@@ -95,12 +95,12 @@ const logError = ({
     errorDescription,
     userName,
     chatId,
-    shortCode,
+    requestUrl,
 }) => {
     const DIVIDER = "\n-------------------------------------\n";
     const LOG = `\n Code: ${errorCode ? errorCode : ""}\n Description: ${
         errorDescription ? errorDescription : ""
-    }\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${shortCode}`;
+    }\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${requestUrl}`;
 
     switch (type) {
         case ERROR_TYPE.RATE_LIMIT:

@@ -34,7 +34,6 @@ const edgeListCleaner = (streamList) => {
         let media = streamList[i].node;
         let mediaType = media.__typename;
         let ownerId = media?.owner?.id;
-        let shortCode = media.shortcode;
         let userName = media?.owner?.username;
         let mediaUrl = "";
         let mediaList = [];
@@ -74,10 +73,6 @@ const edgeListCleaner = (streamList) => {
 
         if (ownerId) {
             resultItem.ownerId = ownerId;
-        }
-
-        if (shortCode) {
-            resultItem.shortCode = shortCode;
         }
 
         if (userName) {
