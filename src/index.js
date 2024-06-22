@@ -5,6 +5,8 @@ const { Bot, Browser, connectDB } = require("./config");
 const { initQueue } = require("./queue");
 const { log, domainCleaner, extractShortCode } = require("./utils");
 const ContentRequest = require("./models/ContentRequest");
+const { MESSSAGE } = require("./constants");
+const { sendMessage } = require("./telegramActions");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
