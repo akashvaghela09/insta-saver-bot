@@ -163,7 +163,7 @@ const fetchPendingRequests = async () => {
             });
         });
 
-        log("Queue updated with fresh pending requests.");
+        log("Queue updated with fresh pending requests.", queue.length);
     } catch (error) {
         log("Error fetching pending requests:", error);
     }
@@ -195,6 +195,7 @@ const initQueue = async () => {
         // setInterval(fetchPendingRequests, 300000); // Adjust the interval as needed
         setInterval(fetchPendingRequests, 30000); // Adjust the interval as needed
 
+        log("process queue after fetching pending request");
         await processQueue();
     } catch (error) {
         log("Error initializing queue: ", error);
