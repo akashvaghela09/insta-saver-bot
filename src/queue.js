@@ -187,7 +187,7 @@ const initQueue = async () => {
                     retryCount: newRequest.retryCount,
                     chatId: newRequest.chatId,
                 });
-                log("New request added to the queue:", newRequest);
+                log("New request added to the queue:", newRequest._id);
             }
         });
 
