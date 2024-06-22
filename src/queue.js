@@ -175,36 +175,21 @@ const initQueue = async () => {
         await fetchPendingRequests();
         log("Queue initialized with pending requests");
 
-        try {
-            const isReplicaSet = await ContentRequest?.db
-                ?.command({ isMaster: 1 })
-                ?.then((info) => info.setName !== undefined);
-            log("isReplicaSet: ", isReplicaSet);
-
-            if (isReplicaSet) {
-                // Set up a watcher for new content requests in MongoDB
-                const changeStream = ContentRequest.watch();
-                changeStream.on("change", async (change) => {
-                    if (change.operationType === "insert") {
-                        const newRequest = change.fullDocument;
-                        addToQueue({
-                            id: newRequest._id.toString(),
-                            requestUrl: newRequest.requestUrl,
-                            requestedBy: newRequest.requestedBy,
-                            retryCount: newRequest.retryCount,
-                            chatId: newRequest.chatId,
-                        });
-                        log("New request added to the queue:", newRequest);
-                    }
+        // Set up a watcher for new content requests in MongoDB
+        const changeStream = ContentRequest.watch();
+        changeStream.on("change", async (change) => {
+            if (change.operationType === "insert") {
+                const newRequest = change.fullDocument;
+                addToQueue({
+                    id: newRequest._id.toString(),
+                    requestUrl: newRequest.requestUrl,
+                    requestedBy: newRequest.requestedBy,
+                    retryCount: newRequest.retryCount,
+                    chatId: newRequest.chatId,
                 });
-            } else {
-                log(
-                    "Change streams are not supported on non-replica set MongoDB instances."
-                );
+                log("New request added to the queue:", newRequest);
             }
-        } catch (error) {
-            log("Error on fetching replica set value", error);
-        }
+        });
 
         // Periodically synchronize the queue with the database
         // setInterval(fetchPendingRequests, 300000); // Adjust the interval as needed
