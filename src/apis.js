@@ -1,6 +1,7 @@
 const axios = require("axios");
 const { edgeListCleaner, log } = require("./utils");
 const { Browser } = require("./config");
+const { MEDIA_TYPE } = require("./constants");
 
 const getOwnerId = async (shortCode) => {
     let response = {

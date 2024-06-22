@@ -215,8 +215,6 @@ const sendRequestedData = async (data) => {
         mediaType,
         mediaList,
     } = data;
-    // console.log("sendRequestedData data : ", data);
-    log("sendRequestedData data : ", data);
 
     const messagesToDelete = [];
 

@@ -1,5 +1,6 @@
 const path = require("path");
 const fs = require("fs");
+const { ERROR_TYPE, LOG_TYPE, SUCCESS_MESSAGE } = require("../constants");
 
 // Function to get current date-time in IST
 const getISTTime = () => {
@@ -63,10 +64,12 @@ const log = (...args) => {
     console.log(formattedLogMessage);
 };
 
-const logMessage = ({ type, userName, chatId, requestUrl }) => {
+const logMessage = ({ type, requestedBy, chatId, requestUrl }) => {
+    const { userName, firstName } = requestedBy;
     const DIVIDER = "\n-------------------------------------\n";
-    const LOG = `\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${requestUrl}`;
-
+    const LOG = `\n User: ${
+        firstName ? firstName : userName
+    }\n Chat Id: ${chatId}\n Request Url: ${requestUrl}`;
     switch (type) {
         case LOG_TYPE.GROUP:
             console.log(DIVIDER, SUCCESS_MESSAGE.GROUP, LOG, DIVIDER);
@@ -93,14 +96,17 @@ const logError = ({
     action,
     errorCode,
     errorDescription,
-    userName,
+    requestedBy,
     chatId,
     requestUrl,
 }) => {
+    const { userName, firstName } = requestedBy;
     const DIVIDER = "\n-------------------------------------\n";
     const LOG = `\n Code: ${errorCode ? errorCode : ""}\n Description: ${
         errorDescription ? errorDescription : ""
-    }\n User: ${userName}\n Chat Id: ${chatId}\n Short Code: ${requestUrl}`;
+    }\n User: ${
+        firstName ? firstName : userName
+    }\n Chat Id: ${chatId}\n Request Url: ${requestUrl}`;
 
     switch (type) {
         case ERROR_TYPE.RATE_LIMIT:
