@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+Dockerfile
+.dockerignore
+.git
+.gitignore
+.cache
+
+logs
+.cache
+puppeteer_data
+cookies.json
