@@ -20,14 +20,14 @@ class Browser {
                         "--disable-setuid-sandbox",
                         "--disable-dev-shm-usage",
                     ],
-                    userDataDir,
+                    // userDataDir,
                 };
 
                 this.browserInstance = await puppeteer.launch(launchOptions);
                 log("Browser launched successfully");
 
                 // Check authentication status on launch
-                await this.CheckAuth();
+                // await this.CheckAuth();
             } catch (error) {
                 log("Error launching browser:", error);
             }
