@@ -12,6 +12,7 @@ const contentResponseSchema = new mongoose.Schema(
             firstName: String,
         },
         requestUrl: String,
+        shortCode: String,
         updatedAt: { type: Date, default: Date.now },
         mediaUrl: String,
         mediaType: String,

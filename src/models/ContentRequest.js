@@ -9,6 +9,7 @@ const contentRequestSchema = new mongoose.Schema(
             userName: String,
             firstName: String,
         },
+        shortCode: { type: String },
         status: { type: String, default: REQUEST_STATUS.PENDING },
         retryCount: { type: Number, default: 0 },
         requestedAt: { type: Date, default: Date.now },
