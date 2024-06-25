@@ -1,3 +1,5 @@
+const { MEDIA_TYPE } = require("../constants");
+
 const extractShortCode = (url) => {
     // Define a regular expression pattern to match the streamId in the URL
     const regex = /\/(?:reel|p)\/([a-zA-Z0-9_-]+)/;
@@ -27,70 +29,76 @@ const domainCleaner = (url) => {
     }
 };
 
-const edgeListCleaner = (streamList) => {
-    let results = [];
-
-    for (let i = 0; i < streamList.length; i++) {
-        let media = streamList[i].node;
-        let mediaType = media.__typename;
-        let ownerId = media?.owner?.id;
-        let userName = media?.owner?.username;
+const cleanEdgeList = (streamList) => {
+    return streamList.map(({ node }) => {
+        const mediaType = node.__typename;
+        const ownerId = node?.owner?.id;
+        const userName = node?.owner?.username;
         let mediaUrl = "";
         let mediaList = [];
-        let caption = media.edge_media_to_caption?.edges[0]?.node?.text;
+        const caption = node.edge_media_to_caption?.edges[0]?.node?.text;
 
         switch (mediaType) {
-            case "XDTGraphImage":
-                mediaUrl = media.display_url;
+            case MEDIA_TYPE.IMAGE:
+                mediaUrl = node.display_url;
                 break;
-            case "XDTGraphVideo":
-                mediaUrl = media.video_url;
+            case MEDIA_TYPE.VIDEO:
+                mediaUrl = node.video_url;
                 break;
-            case "XDTGraphSidecar":
-                let list = edgeListCleaner(
-                    media.edge_sidecar_to_children.edges
-                );
-                mediaList = [...list];
+            case MEDIA_TYPE.MEDIA_GROUP:
+                mediaList = cleanEdgeList(node.edge_sidecar_to_children.edges);
                 break;
             default:
-                mediaUrl = media.display_url;
+                mediaUrl = node.display_url;
                 break;
         }
 
-        let resultItem = {};
-
-        if (mediaUrl) {
-            resultItem.mediaUrl = mediaUrl;
-        }
-
-        if (mediaList.length > 0) {
-            resultItem.mediaList = mediaList;
-        }
-
-        if (caption) {
-            resultItem.caption = caption;
-        }
-
-        if (ownerId) {
-            resultItem.ownerId = ownerId;
-        }
-
-        if (userName) {
-            resultItem.userName = userName;
-        }
-
-        if (mediaType) {
-            resultItem.mediaType = mediaType;
-        }
-
-        results.push(resultItem);
-    }
-
-    return results;
+        return {
+            mediaUrl,
+            mediaList,
+            caption,
+            ownerId,
+            userName,
+            mediaType,
+        };
+    });
 };
 
+const cleanTimelineResponse = (streamList) => {
+    return streamList.map(({ node }) => {
+        const mediaType = node?.__typename;
+        const displayUrl = node?.display_url;
+        const thumbnailUrl = node?.thumbnail_src;
+        const videoUrl = node?.video_url;
+        const caption = node?.edge_media_to_caption?.edges[0]?.node?.text || "";
+        const owner = {
+            userName: node?.owner?.username,
+            avatarUrl: node?.owner?.profile_pic_url,
+            fullName: node?.owner?.full_name,
+        };
+
+        const resultItem = {
+            shortCode: node.shortcode,
+            mediaUrl: videoUrl || displayUrl,
+            displayUrl,
+            thumbnailUrl,
+            mediaType,
+            caption,
+            owner,
+        };
+
+        if (mediaType === MEDIA_TYPE.MEDIA_GROUP) {
+            resultItem.mediaList = cleanEdgeList(
+                node.edge_sidecar_to_children.edges
+            );
+        }
+
+        return resultItem;
+    });
+};
 module.exports = {
     extractShortCode,
     domainCleaner,
-    edgeListCleaner,
+    cleanEdgeList,
+    cleanTimelineResponse,
 };
