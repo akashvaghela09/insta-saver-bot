@@ -48,10 +48,12 @@ const REQUEST_STATUS = {
 };
 
 const MEDIA_TYPE = {
-    VIDEO: "XDTGraphVideo",
-    IMAGE: "XDTGraphImage",
-    MEDIA_GROUP: "XDTGraphSidecar",
+    VIDEO: "GraphVideo",
+    IMAGE: "GraphImage",
+    MEDIA_GROUP: "GraphSidecar",
 };
+
+const INSTAGRAM_API_URL = "https://www.instagram.com/graphql/query";
 
 module.exports = {
     LOG_TYPE,
@@ -61,4 +63,5 @@ module.exports = {
     MESSSAGE,
     REQUEST_STATUS,
     MEDIA_TYPE,
+    INSTAGRAM_API_URL,
 };
