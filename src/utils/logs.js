@@ -72,19 +72,19 @@ const logMessage = ({ type, requestedBy, chatId, requestUrl }) => {
     }\n Chat Id: ${chatId}\n Request Url: ${requestUrl}`;
     switch (type) {
         case LOG_TYPE.GROUP:
-            console.log(DIVIDER, SUCCESS_MESSAGE.GROUP, LOG, DIVIDER);
+            log(DIVIDER, SUCCESS_MESSAGE.GROUP, LOG, DIVIDER);
             break;
         case LOG_TYPE.VIDEO:
-            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO, LOG, DIVIDER);
+            log(DIVIDER, SUCCESS_MESSAGE.VIDEO, LOG, DIVIDER);
             break;
         case LOG_TYPE.VIDEO_URL:
-            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
+            log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
             break;
         case LOG_TYPE.PHOTO:
-            console.log(DIVIDER, SUCCESS_MESSAGE.PHOTO, LOG, DIVIDER);
+            log(DIVIDER, SUCCESS_MESSAGE.PHOTO, LOG, DIVIDER);
             break;
         case LOG_TYPE.PHOTO_URL:
-            console.log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
+            log(DIVIDER, SUCCESS_MESSAGE.VIDEO_URL, LOG, DIVIDER);
             break;
         default:
             break;
@@ -110,10 +110,10 @@ const logError = ({
 
     switch (type) {
         case ERROR_TYPE.RATE_LIMIT:
-            console.log(DIVIDER, action, ERROR_TYPE.RATE_LIMIT, LOG, DIVIDER);
+            log(DIVIDER, action, ERROR_TYPE.RATE_LIMIT, LOG, DIVIDER);
             break;
         case ERROR_TYPE.FAILED:
-            console.log(DIVIDER, action, ERROR_TYPE.FAILED, LOG, DIVIDER);
+            log(DIVIDER, action, ERROR_TYPE.FAILED, LOG, DIVIDER);
             break;
         default:
             break;
