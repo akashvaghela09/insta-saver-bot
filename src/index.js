@@ -1,7 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-const { Bot, Browser, connectDB } = require("./config");
+const { Bot, connectDB } = require("./config");
 const { initQueue } = require("./queue");
 const { log, domainCleaner, extractShortCode } = require("./utils");
 const ContentRequest = require("./models/ContentRequest");
@@ -51,6 +51,7 @@ Bot.on("message", async (msg) => {
         const newRequest = new ContentRequest({
             chatId,
             requestUrl,
+            shortCode,
             requestedBy: { userName, firstName },
         });
 
@@ -63,12 +64,6 @@ Bot.on("message", async (msg) => {
     }
 });
 
-// Define a route for the GET request on the root endpoint '/'
-app.get("/", async (req, res) => {
-    // Send the response 'Hello' when the endpoint is accessed
-    res.send(Browser.authStatus);
-});
-
 // Check for Master Backend configuration [OPTIONAL]
 // Check if the module is being run directly
 if (require.main === module) {
@@ -78,9 +73,6 @@ if (require.main === module) {
         try {
             // Connect to MongoDB
             await connectDB();
-
-            // Open the browser for web scraping
-            await Browser.Open();
 
             // Initialize the job queue
             await initQueue();
@@ -95,6 +87,5 @@ if (require.main === module) {
 
 // Handle shutdown gracefully
 process.on("SIGINT", async () => {
-    await Browser.Close();
     process.exit(0);
 });
