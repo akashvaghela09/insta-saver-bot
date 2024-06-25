@@ -1,5 +1,4 @@
-const { getStreamData } = require("./apis");
-const { Browser } = require("./config");
+const { fetchOwnerId, getStreamDataRecursively } = require("./apis");
 const { REQUEST_STATUS, MESSSAGE } = require("./constants");
 const ContentRequest = require("./models/ContentRequest");
 const ContentResponse = require("./models/ContentResponse");
@@ -37,11 +36,6 @@ const processQueue = async () => {
     }
 
     try {
-        // Open the browser if not already opened
-        if (!Browser.browserInstance) {
-            await Browser.Open();
-        }
-
         let messagesToDelete = [];
 
         log(MESSSAGE.DOWNLOADING.replace("requestUrl", job.requestUrl));
@@ -58,8 +52,15 @@ const processQueue = async () => {
             }
         }
 
+        let ownerIdResponse = await fetchOwnerId(job.shortCode);
+        const ownerId = ownerIdResponse.data;
+
+        if (!ownerId) {
+            return;
+        }
+
         // Retrieve content data from the specified URL
-        const result = await getStreamData(job.requestUrl);
+        const result = await getStreamDataRecursively(job.shortCode, ownerId);
         log("result: ", result);
 
         // Delete temporary messages after content retrieval
@@ -95,6 +96,7 @@ const processQueue = async () => {
                 owner: { ...result.data?.owner },
                 requestedBy: { ...job?.requestedBy },
                 requestUrl: job?.requestUrl,
+                shortCode: job?.shortCode,
                 updatedAt: new Date(),
                 mediaUrl: result.data?.mediaUrl,
                 mediaType: result.data?.mediaType,
@@ -115,11 +117,6 @@ const processQueue = async () => {
                 status: REQUEST_STATUS.PENDING,
             });
             log("Remaining items in queue:", pendingCount);
-
-            // Close browser if no pending jobs
-            if (pendingCount === 0) {
-                await Browser.Close();
-            }
         }
     } catch (error) {
         log("Error processing job:", error);
@@ -146,7 +143,7 @@ const fetchPendingRequests = async () => {
         const pendingRequests = await ContentRequest.find({
             status: REQUEST_STATUS.PENDING,
             retryCount: { $lt: 5 },
-        });
+        }).limit(15);
         log("Fetched pending requests: ", pendingRequests.length);
 
         // Clear the current queue
@@ -156,6 +153,7 @@ const fetchPendingRequests = async () => {
         pendingRequests.forEach((request) => {
             queue.push({
                 id: request._id.toString(),
+                shortCode: request.shortCode,
                 requestUrl: request.requestUrl,
                 requestedBy: request.requestedBy,
                 retryCount: request.retryCount,
@@ -182,6 +180,7 @@ const initQueue = async () => {
                 const newRequest = change.fullDocument;
                 addToQueue({
                     id: newRequest._id.toString(),
+                    shortCode: newRequest.shortCode,
                     requestUrl: newRequest.requestUrl,
                     requestedBy: newRequest.requestedBy,
                     retryCount: newRequest.retryCount,
@@ -192,8 +191,7 @@ const initQueue = async () => {
         });
 
         // Periodically synchronize the queue with the database
-        // setInterval(fetchPendingRequests, 300000); // Adjust the interval as needed
-        setInterval(fetchPendingRequests, 30000); // Adjust the interval as needed
+        setInterval(fetchPendingRequests, 60000); // Adjust the interval as needed
 
         log("process queue after fetching pending request");
         await processQueue();
