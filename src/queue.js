@@ -40,22 +40,33 @@ const processQueue = async () => {
 
         log(MESSSAGE.DOWNLOADING.replace("requestUrl", job.requestUrl));
 
-        if (job.retryCount === 0) {
-            // Send message indicating content gathering
-            const downloadingMessage = await sendMessage({
-                ...job,
-                message: MESSSAGE.GATHERING_CONTENT,
-            });
+        // if (job.retryCount === 0) {
+        //     // Send message indicating content gathering
+        //     const downloadingMessage = await sendMessage({
+        //         ...job,
+        //         message: MESSSAGE.GATHERING_CONTENT,
+        //     });
 
-            if (downloadingMessage) {
-                messagesToDelete.push(downloadingMessage.message_id);
-            }
-        }
+        //     if (downloadingMessage) {
+        //         messagesToDelete.push(downloadingMessage.message_id);
+        //     }
+        // }
 
         let ownerIdResponse = await fetchOwnerId(job.shortCode);
         const ownerId = ownerIdResponse.data;
+        console.log("ownerIdResponse: ", ownerIdResponse);
 
         if (!ownerId) {
+            await ContentRequest.findByIdAndUpdate(
+                job.id,
+                {
+                    $set: { updatedAt: new Date() },
+                    $inc: { retryCount: 1 },
+                },
+                { new: true }
+            );
+
+            job.retryCount += 1;
             return;
         }
 
@@ -83,7 +94,7 @@ const processQueue = async () => {
                 return;
             }
 
-            job.retryCount = -1;
+            job.retryCount += 1;
         } else {
             // Update request status on success and save response data
             await ContentRequest.findByIdAndUpdate(job.id, {
@@ -177,6 +188,9 @@ const initQueue = async () => {
         const changeStream = ContentRequest.watch();
         changeStream.on("change", async (change) => {
             if (change.operationType === "insert") {
+                console.log(
+                    "got new request ========================================="
+                );
                 const newRequest = change.fullDocument;
                 addToQueue({
                     id: newRequest._id.toString(),

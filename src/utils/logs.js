@@ -40,17 +40,18 @@ const formatLogMessage = (args) => {
 
 const log = (...args) => {
     const logDirectory = path.join(__dirname, "./../../logs"); // Define log directory
-    const logFileName = path.join(
-        logDirectory,
-        `${getISTTime().split(" ")[0]}.log`
-    ); // Log file name based on current date
+
+    const timestamp = getISTTime(); // Current date-time in IST format
+    const date = timestamp.split(" ")[0];
+    const hour = timestamp.split(" ")[1].split(":")[0];
+
+    const logFileName = path.join(logDirectory, `${date}_${hour}.log`); // Log file name based on current date and hour
 
     // Create log directory if it doesn't exist
     if (!fs.existsSync(logDirectory)) {
         fs.mkdirSync(logDirectory);
     }
 
-    const timestamp = getISTTime(); // Current date-time in IST format
     const formattedLogMessage = `[${timestamp}] ${formatLogMessage(args)}\n`; // Format log message
 
     // Append log message to the log file
