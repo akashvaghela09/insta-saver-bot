@@ -9,6 +9,7 @@ const { scrapWithFastDl } = require("./apis");
 
 let queue = [];
 let processing = false;
+let currentJob = null; // Variable to store the current job being processed
 const QUEUE_LIMIT = 5; // Maximum number of items in the queue
 
 const logPendingCount = async () => {
@@ -31,8 +32,8 @@ const processQueue = async () => {
     }
 
     processing = true;
-    const job = queue.shift();
-    log("job to process: ", job);
+    currentJob = queue.shift(); // Assign the job to currentJob
+    log("job to process: ", currentJob);
 
     try {
         if (!Browser.browserInstance) {
@@ -40,26 +41,26 @@ const processQueue = async () => {
             await Browser.Open();
         }
 
-        let result = await scrapWithFastDl(job.requestUrl);
+        let result = await scrapWithFastDl(currentJob.requestUrl);
 
-        log(MESSSAGE.DOWNLOADING.replace("requestUrl", job.requestUrl));
+        log(MESSSAGE.DOWNLOADING.replace("requestUrl", currentJob.requestUrl));
 
         if (!result.success) {
             console.log("failed the scrap request");
-            let retryCount = job.retryCount + 1;
+            let retryCount = currentJob.retryCount + 1;
             let newStatus =
                 retryCount < 5 ? REQUEST_STATUS.PENDING : REQUEST_STATUS.FAILED;
 
-            await ContentRequest.findByIdAndUpdate(job.id, {
+            await ContentRequest.findByIdAndUpdate(currentJob.id, {
                 $set: { updatedAt: new Date(), status: newStatus },
-                $inc: { retryCount: job.retryCount + 1 },
+                $inc: { retryCount: currentJob.retryCount + 1 },
             });
         } else {
             const newResponseData = new ContentResponse({
                 owner: { ...result.data?.owner },
-                requestedBy: { ...job?.requestedBy },
-                requestUrl: job?.requestUrl,
-                shortCode: job?.shortCode,
+                requestedBy: { ...currentJob?.requestedBy },
+                requestUrl: currentJob?.requestUrl,
+                shortCode: currentJob?.shortCode,
                 updatedAt: new Date(),
                 mediaUrl: result.data?.mediaUrl,
                 mediaType: result.data?.mediaType,
@@ -75,13 +76,13 @@ const processQueue = async () => {
             await waitFor(500);
 
             // Send requested data to the user
-            await sendRequestedData({ ...result.data, ...job });
+            await sendRequestedData({ ...result.data, ...currentJob });
 
             // Update request status on success and save response data
-            await ContentRequest.findByIdAndUpdate(job.id, {
+            await ContentRequest.findByIdAndUpdate(currentJob.id, {
                 status: REQUEST_STATUS.DONE,
                 updatedAt: new Date(),
-                retryCount: job.retryCount + 1,
+                retryCount: currentJob.retryCount + 1,
             });
 
             logPendingCount();
@@ -90,6 +91,7 @@ const processQueue = async () => {
         log("Error processing job:", error);
     } finally {
         processing = false;
+        currentJob = null; // Clear the current job after processing
         log("process next item");
 
         await waitFor(500);
@@ -106,12 +108,11 @@ const addToQueue = async (data) => {
         (item) => item.shortCode === shortCode && item.chatId === chatId
     );
 
-    // Check if the request is already being processed
+    // Check if the request is currently being processed
     const isProcessing =
-        processing &&
-        queue.some(
-            (item) => item.shortCode === shortCode && item.chatId === chatId
-        );
+        currentJob &&
+        currentJob.shortCode === shortCode &&
+        currentJob.chatId === chatId;
 
     if (isInQueue || isProcessing) {
         log(
