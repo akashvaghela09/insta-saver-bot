@@ -9,3 +9,4 @@ logs
 .cache
 puppeteer_data
 cookies.json
+cookies.txt
