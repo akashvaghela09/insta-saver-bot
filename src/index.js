@@ -1,12 +1,13 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-const { Bot, connectDB } = require("./config");
+const { Bot, connectDB, Browser } = require("./config");
 const { initQueue } = require("./queue");
 const { log, domainCleaner, extractShortCode } = require("./utils");
 const ContentRequest = require("./models/ContentRequest");
 const { MESSSAGE } = require("./constants");
 const { sendMessage } = require("./telegramActions");
+const { isValidInstaUrl } = require("./utils/helper");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -34,24 +35,19 @@ Bot.on("message", async (msg) => {
         });
     } else if (isURL) {
         let requestUrl = userMessage;
-        let urlResponse = domainCleaner(requestUrl);
+        let urlResponse = isValidInstaUrl(requestUrl);
         log("urlResponse: ", urlResponse);
 
-        let shortCode = extractShortCode(requestUrl);
-        log("shortCode: ", shortCode);
-
-        if (!urlResponse.success || !shortCode) {
+        if (!urlResponse.success || !urlResponse.shortCode) {
             // If domain cleaner fails, exit early
             log("return from here as shortCode not found");
             return;
-        } else {
-            requestUrl = urlResponse.data;
         }
 
         const newRequest = new ContentRequest({
             chatId,
             requestUrl,
-            shortCode,
+            shortCode: urlResponse.shortCode,
             requestedBy: { userName, firstName },
         });
 
@@ -74,6 +70,9 @@ if (require.main === module) {
             // Connect to MongoDB
             await connectDB();
 
+            // Open Browser
+            await Browser.Open();
+
             // Initialize the job queue
             await initQueue();
         } catch (error) {
@@ -87,5 +86,7 @@ if (require.main === module) {
 
 // Handle shutdown gracefully
 process.on("SIGINT", async () => {
+    // Open Browser
+    await Browser.Close();
     process.exit(0);
 });
