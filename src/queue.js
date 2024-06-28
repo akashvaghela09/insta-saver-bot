@@ -99,6 +99,27 @@ const processQueue = async () => {
 
 // Add a new content request to the queue
 const addToQueue = async (data) => {
+    const { shortCode, chatId } = data;
+
+    // Check if the request is already in the queue
+    const isInQueue = queue.some(
+        (item) => item.shortCode === shortCode && item.chatId === chatId
+    );
+
+    // Check if the request is already being processed
+    const isProcessing =
+        processing &&
+        queue.some(
+            (item) => item.shortCode === shortCode && item.chatId === chatId
+        );
+
+    if (isInQueue || isProcessing) {
+        log(
+            `Request with shortCode ${shortCode} and chatId ${chatId} is already in the queue or being processed.`
+        );
+        return;
+    }
+
     queue.push(data);
 
     log("!processing ", !processing);
