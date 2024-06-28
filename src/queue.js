@@ -9,7 +9,7 @@ const { scrapWithFastDl } = require("./apis");
 
 let queue = [];
 let processing = false;
-const QUEUE_LIMIT = 15; // Maximum number of items in the queue
+const QUEUE_LIMIT = 5; // Maximum number of items in the queue
 
 const logPendingCount = async () => {
     // Count remaining pending requests
@@ -113,10 +113,6 @@ const fetchPendingRequests = async () => {
         const pendingRequests = await ContentRequest.find({
             status: REQUEST_STATUS.PENDING,
             retryCount: { $lt: 5 },
-            requestedBy: {
-                userName: "akashvaghela09",
-                firstName: "Akash",
-            },
         })
             .sort({ requestedAt: 1 })
             .limit(QUEUE_LIMIT);
@@ -178,7 +174,7 @@ const initQueue = async () => {
         });
 
         // Periodically synchronize the queue with the database
-        setInterval(fetchPendingRequests, 30000); // Adjust the interval as needed
+        setInterval(fetchPendingRequests, 60000); // Adjust the interval as needed
 
         log("process queue after fetching pending request");
         await processQueue();
