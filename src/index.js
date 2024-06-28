@@ -84,6 +84,14 @@ if (require.main === module) {
     module.exports = app;
 }
 
+app.get("/", (req, res) => {
+    res.json({ message: "Welcome to Insta Saver Bot" });
+});
+
+app.get("/test", (req, res) => {
+    res.json({ message: "Bot is Online!!" });
+});
+
 // Handle shutdown gracefully
 process.on("SIGINT", async () => {
     // Open Browser
