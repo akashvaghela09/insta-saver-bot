@@ -138,6 +138,7 @@ const sendVideo = async (context) => {
             logError({ ...errorObj, type: ERROR_TYPE.RATE_LIMIT });
             await Bot.sendMessage(chatId, MESSSAGE.COOL_DOWN);
         } else if (error?.response?.body?.error_code === 400) {
+            log("error?.response?.body ", error?.response?.body);
             // Handle specific error for video upload limits
             await sendMessage({
                 ...context,
