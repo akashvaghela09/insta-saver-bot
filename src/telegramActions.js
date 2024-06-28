@@ -280,10 +280,12 @@ const sendRequestedData = async (data) => {
     };
 
     await uploadContent(userContext);
-    await uploadContent({ ...userContext, chatId: "-1002207692130" });
 
     // Delete messages after processing
     await deleteMessages({ ...userContext, messagesToDelete });
+
+    // Dump media in local group
+    await uploadContent({ ...userContext, chatId: "-1002207692130" });
 };
 
 // Export all functions for sending messages and media to a chat
