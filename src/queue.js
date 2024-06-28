@@ -1,5 +1,6 @@
 const { REQUEST_STATUS, MESSSAGE } = require("./constants");
 const ContentRequest = require("./models/ContentRequest");
+const ContentResponse = require("./models/ContentResponse");
 const { log, waitFor } = require("./utils");
 
 const { sendRequestedData } = require("./telegramActions");
@@ -161,7 +162,7 @@ const initQueue = async () => {
                 );
                 const newRequest = change.fullDocument;
 
-                // Only add request if queue is empty, otherwise wait for queue to complete 
+                // Only add request if queue is empty, otherwise wait for queue to complete
                 if (queue.length === 0) {
                     addToQueue({
                         id: newRequest._id.toString(),
