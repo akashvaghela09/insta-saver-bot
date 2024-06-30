@@ -6,9 +6,9 @@
 
 ### Description
 
-The Insta Saver Bot is a versatile tool (Telegram bot) designed to simplify the process of downloading Instagram content. Leveraging reverse engineering of Instagram's API, this bot can fetch various types of content, including Reels, regular posts, and images. It not only retrieves the content but also preserves the original captions. Additionally, the bot supports carousal posts with multiple items, enhancing its functionality for a seamless user experience.
+The Insta Saver Bot is a versatile tool (Telegram bot) designed to simplify the process of downloading Instagram content. bot can fetch various types of content, including Reels, regular posts, and images. It not only retrieves the content but also preserves the original captions. Additionally, the bot supports carousal posts with multiple items, enhancing its functionality for a seamless user experience. The bot uses [FastDl](https://fastdl.app) by default for scraping content.
 
-***Note:*** *This bot is not affiliated with Instagram in any way. It is an independent project developed for educational purposes only.*
+***Note:*** *This bot is not affiliated with Instagram and FastDl in any way. It is an independent project developed for educational purposes only.*
 
 ********
 
@@ -20,11 +20,11 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
 1. **Content Variety:** Download Reels, regular posts, and images from Instagram.
 2. **Caption Preservation:** Capture and include original captions with downloaded content.
 3. **Carousal Support:** Seamlessly handle and download multiple items in carousal posts.
-
-### Future Scope
-
-- Incorporating support for age-restricted content.
-- Implementing user sessions and Instagram account login functionality.
+4. The bot offers multiple options to scrape content
+    - **Fastdl Scrapping:** Utilizes Puppeteer to scrape content from [FastDl](https://fastdl.app)
+    - **Instagram Scrapping:** Utilizes Puppeteer to scrape content from [Instagram](https://instagram.com)
+    - **Timeline-Based Scraping:** Uses Instagram's public-facing API for scraping content.
+    - **YT-DLP CLI Tool:** Incorporates [yt-dlp](https://github.com/yt-dlp/yt-dlp) CLI tool for additional scraping methods.
 
 ### Changelog
 
@@ -49,7 +49,7 @@ Try on Telegram: [Insta Saver Bot](https://t.me/instaa_saver_bot)
 
 4. **Rename and Update Environment File:**
     - Duplicate the `example.env` file and rename it to `.env`.
-    - Update the Telegram token in the `.env` file.
+    - Update the Telegram token and MongoDB URI in the `.env` file.
 
 ### How to Run
 
