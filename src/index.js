@@ -1,161 +1,100 @@
 require("dotenv").config();
 const express = require("express");
 const app = express();
-const { bot } = require("./config");
-const { domainCleaner, extractShortCode } = require("./helper");
-const { getStreamData } = require("./apis");
+const { Bot, connectDB, Browser } = require("./config");
+const { initQueue } = require("./queue");
+const { log, domainCleaner, extractShortCode } = require("./utils");
+const ContentRequest = require("./models/ContentRequest");
 const { MESSSAGE } = require("./constants");
-const {
-    sendMessage,
-    sendChatAction,
-    deleteMessages,
-    sendVideo,
-    sendPhoto,
-    sendMediaGroup,
-} = require("./telegramActions");
+const { sendMessage } = require("./telegramActions");
+const { isValidInstaUrl } = require("./utils/helper");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
 
-class ChatContext {
-    constructor(chatId, userName, firstName, userMessage) {
-        this.chatId = chatId;
-        this.userName = userName;
-        this.firstName = firstName;
-        this.userMessage = userMessage;
-        this.messagesToDelete = [];
-    }
-    setProperty(key, value) {
-        this[key] = value;
-    }
-    addMessageId(item) {
-        this.messagesToDelete.push(item);
-    }
-}
-
 // Listen for any kind of message. There are different kinds of messages.
-bot.on("message", async (msg) => {
+Bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
-    const userName = msg.from.username;
-    const firstName = msg.from.first_name || "";
     const userMessage = msg.text;
-    const isURL =
+    const userName = msg?.from?.username || "";
+    const firstName = msg?.from?.first_name || "";
+    let isURL =
         msg.entities &&
         msg.entities.length > 0 &&
         msg.entities[0].type === "url";
-    let shortCode = "";
-
-    const context = new ChatContext(chatId, userName, firstName, userMessage);
-
-    // Show typing status
-    await sendChatAction(context);
-
     // Process user message
     if (userMessage === "/start") {
+        // Construct welcome message with user's first name
         let welcomeMessage = MESSSAGE.WELCOME.replace("firstName", firstName);
 
-        // send a message to the chat acknowledging receipt of their message
-        await sendMessage({ ...context, message: welcomeMessage });
+        // Send a welcome message to the chat
+        await sendMessage({
+            chatId,
+            requestedBy: { userName, firstName },
+            message: welcomeMessage,
+        });
     } else if (isURL) {
-        const downloadingMessage = await sendMessage({
-            ...context,
-            message: MESSSAGE.GATHERING_CONTENT,
-        });
+        let requestUrl = userMessage;
+        let urlResponse = isValidInstaUrl(requestUrl);
+        log("urlResponse: ", urlResponse);
 
-        if (downloadingMessage) {
-            context.addMessageId(downloadingMessage.message_id);
-        }
-
-        let url = userMessage;
-        let urlResponse = domainCleaner(url);
-
-        shortCode = extractShortCode(url);
-        context.setProperty("shortCode", shortCode);
-        console.log(MESSSAGE.DOWNLOADING.replace("shortCode", shortCode));
-
-        if (!urlResponse.success) {
-            await sendMessage({ ...context, message: urlResponse.data });
-            await deleteMessages(context);
-            return;
-        } else {
-            url = urlResponse.data;
-        }
-
-        let streamResponse = await getStreamData(shortCode);
-
-        if (!streamResponse.success) {
-            await sendMessage({ ...context, message: streamResponse.message });
-            await deleteMessages(context);
+        if (!urlResponse.success || !urlResponse.shortCode) {
+            // If domain cleaner fails, exit early
+            log("return from here as shortCode not found");
             return;
         }
 
-        await sendChatAction(context);
-
-        // Send the 'Uploading post...' message and store the message ID
-        const uploadingMessage = await sendMessage({
-            ...context,
-            message: MESSSAGE.INITIATING_UPLOAD,
+        const newRequest = new ContentRequest({
+            chatId,
+            requestUrl,
+            shortCode: urlResponse.shortCode,
+            requestedBy: { userName, firstName },
         });
-        if (uploadingMessage) {
-            context.addMessageId(uploadingMessage.message_id);
+
+        try {
+            // Save the request to the database
+            await newRequest.save();
+        } catch (error) {
+            log("Error saving content request:", error);
         }
-
-        let media = streamResponse.data;
-        // console.log("Media Response ==================== \n\n", media);
-
-        if (media.mediaType === "XDTGraphSidecar") {
-            // Prepare media url array
-            const mediaGroupUrls = [];
-            for (let i = 0; i < media.mediaList.length; i++) {
-                let mediaItem = media.mediaList[i];
-                if (mediaItem.mediaType === "XDTGraphImage") {
-                    // Add image to mediaGroupUrls
-                    mediaGroupUrls.push({
-                        type: "photo",
-                        media: mediaItem.mediaUrl,
-                    });
-                } else if (mediaItem.mediaType === "XDTGraphVideo") {
-                    // Add video to mediaGroupUrls
-                    mediaGroupUrls.push({
-                        type: "video",
-                        media: mediaItem.mediaUrl,
-                    });
-                }
-            }
-
-            await sendMediaGroup({ ...context, mediaGroupUrls });
-        } else if (media.mediaType === "XDTGraphVideo") {
-            await sendVideo({ ...context, mediaUrl: media.mediaUrl });
-        } else if (media.mediaType === "XDTGraphImage") {
-            await sendPhoto({ ...context, mediaUrl: media.mediaUrl });
-        }
-
-        if (media.caption) {
-            // Send 'typing' action
-            await sendChatAction(context);
-
-            // Send the caption
-            await sendMessage({ ...context, message: media.caption });
-        }
-
-        await deleteMessages(context);
-        return;
     }
-});
-
-// Define a route for the GET request on the root endpoint '/'
-app.get("/", (req, res) => {
-    // Send the response 'Hello' when the endpoint is accessed
-    res.send(MESSSAGE.HELLO);
 });
 
 // Check for Master Backend configuration [OPTIONAL]
 // Check if the module is being run directly
 if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`Server running at http://localhost:${PORT}`);
+    app.listen(PORT, async () => {
+        log(`Insta saver running at http://localhost:${PORT}`);
+
+        try {
+            // Connect to MongoDB
+            await connectDB();
+
+            // Open Browser
+            await Browser.Open();
+
+            // Initialize the job queue
+            await initQueue();
+        } catch (error) {
+            log("Error during startup:", error);
+        }
     });
 } else {
     // Export the app instance for importing
     module.exports = app;
 }
+
+app.get("/", (req, res) => {
+    res.json({ message: "Welcome to Insta Saver Bot" });
+});
+
+app.get("/test", (req, res) => {
+    res.json({ message: "Bot is Online!!" });
+});
+
+// Handle shutdown gracefully
+process.on("SIGINT", async () => {
+    // Open Browser
+    await Browser.Close();
+    process.exit(0);
+});
