@@ -39,3 +39,11 @@
 - ADD: Logs for message success and errors
 - ADD: Custom methods to handle telegram actions such as sendMessage, deleteMessage for better error handling
 - FIX: Server crash on telegram rate limit error.
+
+### v0.1.6
+- ADD: YT-DL based content scrapping 
+- ADD: FastDL based content scrapping 
+- ADD: Write logs and errors to files
+- ADD: Docker setup for deployment
+- ADD: MongoDB based localise request queue
+- UPDATE: Timeline based recursive scrapping
