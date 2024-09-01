@@ -9,7 +9,7 @@ services:
     ports:
       - 27018:27017
     volumes:
-      - /mnt/other/home/kaidan/Programs/insta-saver-bot/mongo_etc:/etc/mongo/
+      - ./mongo_etc:/etc/mongo/
     command: ["mongod", "--config", "/etc/mongo/mongod.conf"]
     networks:
       vpcbr:
