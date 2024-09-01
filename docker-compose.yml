@@ -1,0 +1,47 @@
+version: '3.1'
+
+services:
+
+  mongo:
+    image: mongo
+    container_name: insta-mongo
+    restart: always
+    ports:
+      - 27018:27017
+    volumes:
+      - /mnt/other/home/kaidan/Programs/insta-saver-bot/mongo_etc:/etc/mongo/
+    command: ["mongod", "--config", "/etc/mongo/mongod.conf"]
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.5
+  mongosetup:
+    container_name: mongo-setup
+    image: mongo
+    depends_on:
+      - mongo
+    restart: "no"
+    entrypoint: [ "bash", "-c", "sleep 10 &&  mongosh --host 10.5.0.5 --port 27017 --eval 'rs.initiate()' "]
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.7
+
+  insta-bot:
+    container_name: insta-bot
+    build: .
+    depends_on:
+     - mongo
+    restart: always
+    ports:
+      - 6060:6060
+    environment:
+      MONGO_URI: mongodb://10.5.0.5:27017/insta
+    networks:
+      vpcbr:
+        ipv4_address: 10.5.0.6
+networks:
+  vpcbr:
+    driver: bridge
+    ipam:
+     config:
+       - subnet: 10.5.0.0/24
+         gateway: 10.5.0.1
