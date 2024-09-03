@@ -76,7 +76,7 @@ if (require.main === module) {
             // Initialize the job queue
             await initQueue();
         } catch (error) {
-            log("Error during startup1:", error);
+            log("Error during startup:", error);
         }
     });
 } else {
