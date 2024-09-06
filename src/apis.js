@@ -113,8 +113,11 @@ const scrapWithFastDl = async (requestUrl) => {
 
     try {
         page = await browser.newPage();
-
-        await page.goto("https://fastdl.app/en");
+        if(requestUrl.includes("/stories/")){
+	    await page.goto("https://fastdl.app/story-saver");
+	}else{
+            await page.goto("https://fastdl.app/en");
+	}
         console.log("browser Went to fastdl");
 
         // Wait for the input field to be ready and type the URL
@@ -135,7 +138,7 @@ const scrapWithFastDl = async (requestUrl) => {
         try {
             const captionElement = await page.waitForSelector(
                 ".output-list__caption",
-                { timeout: 5000 }
+                { timeout: 9000 }
             );
 
             if (captionElement) {

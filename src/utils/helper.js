@@ -21,7 +21,8 @@ const isValidInstaUrl = (url) => {
             return response;
         }
 
-        let type,shortCode = pathname.trim().split("/")[1,2];
+	let type = pathname.trim().split("/")[1];
+        let shortCode = pathname.trim().split("/")[2];
         log("share link type is: "+type)
         if (type === "stories" || shortCode?.length === 11) {
             return {
@@ -30,6 +31,7 @@ const isValidInstaUrl = (url) => {
                 success: true,
             };
         }
+	log(response)
 
         return response;
     } catch (error) {
