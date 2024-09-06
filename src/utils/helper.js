@@ -20,9 +20,7 @@ const isValidInstaUrl = (url) => {
         if (host !== "www.instagram.com") {
             return response;
         }
-
-	let type = pathname.trim().split("/")[1];
-        let shortCode = pathname.trim().split("/")[2];
+        [type,shortCode] = pathname.trim().split("/").slice(1,3);
         log("share link type is: "+type)
         if (type === "stories" || shortCode?.length === 11) {
             return {
