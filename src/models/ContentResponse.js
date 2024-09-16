@@ -11,6 +11,7 @@ const contentResponseSchema = new mongoose.Schema(
             userName: String,
             firstName: String,
         },
+        messageId: String,
         requestUrl: String,
         shortCode: String,
         updatedAt: { type: Date, default: Date.now },

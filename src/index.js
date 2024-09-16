@@ -13,8 +13,19 @@ const { isValidInstaUrl } = require("./utils/helper");
 const PORT = process.env.PORT || 6060;
 
 // Listen for any kind of message. There are different kinds of messages.
-Bot.on("message", async (msg) => {
+Bot.onText(/^\/start/,async (msg, match)=>{
+    let welcomeMessage = MESSSAGE.WELCOME.replace("firstName", firstName);
+
+    // Send a welcome message to the chat
+    await sendMessage({
+        chatId,
+        requestedBy: { userName, firstName },
+        message: welcomeMessage,
+    });
+})
+Bot.onText(/^https:\/\/www\.instagram\.com(.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
+    const messageId = msg.message_id
     const userMessage = msg.text;
     const userName = msg?.from?.username || "";
     const firstName = msg?.from?.first_name || "";
@@ -23,17 +34,7 @@ Bot.on("message", async (msg) => {
         msg.entities.length > 0 &&
         msg.entities[0].type === "url";
     // Process user message
-    if (userMessage === "/start") {
-        // Construct welcome message with user's first name
-        let welcomeMessage = MESSSAGE.WELCOME.replace("firstName", firstName);
-
-        // Send a welcome message to the chat
-        await sendMessage({
-            chatId,
-            requestedBy: { userName, firstName },
-            message: welcomeMessage,
-        });
-    } else if (isURL) {
+    if (isURL) {
         let requestUrl = userMessage;
         let urlResponse = isValidInstaUrl(requestUrl);
         log("urlResponse: ", urlResponse);
@@ -49,6 +50,7 @@ Bot.on("message", async (msg) => {
             requestUrl,
             shortCode: urlResponse.shortCode,
             requestedBy: { userName, firstName },
+            messageId: messageId
         });
 
         try {

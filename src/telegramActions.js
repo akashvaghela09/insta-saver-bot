@@ -58,9 +58,9 @@ const deleteMessages = async (context) => {
 
 // Send a message to a chat
 const sendMessage = async (context) => {
-    const { chatId, requestedBy, requestUrl, message } = context;
+    const { chatId,messageId, requestedBy, requestUrl, message } = context;
     try {
-        let res = await Bot.sendMessage(chatId, message);
+        let res = await Bot.sendMessage(chatId, message,reply_parameters={message_id:messageId,chat_id:chatId});
         return res;
     } catch (error) {
         let errorObj = {
@@ -83,7 +83,7 @@ const sendMessage = async (context) => {
 
 // Send a media group (array of media) to a chat
 const sendMediaGroup = async (context) => {
-    const { chatId, requestedBy, requestUrl, mediaGroupUrls } = context;
+    const { chatId,messageId, requestedBy, requestUrl, mediaGroupUrls } = context;
     try {
         await Bot.sendMediaGroup(chatId, mediaGroupUrls);
         // Log successful group message sending
@@ -114,9 +114,9 @@ const sendMediaGroup = async (context) => {
 
 // Send a video to a chat
 const sendVideo = async (context) => {
-    const { chatId, requestedBy, requestUrl, mediaUrl } = context;
+    const { chatId,messageId, requestedBy, requestUrl, mediaUrl } = context;
     try {
-        await Bot.sendVideo(chatId, mediaUrl);
+        await Bot.sendVideo(chatId, mediaUrl,reply_parameters={message_id:messageId,chat_id:chatId});
         // Log successful video sending
         logMessage({
             type: LOG_TYPE.VIDEO,
@@ -161,9 +161,9 @@ const sendVideo = async (context) => {
 
 // Send a photo to a chat
 const sendPhoto = async (context) => {
-    const { chatId, requestedBy, requestUrl, mediaUrl } = context;
+    const { chatId,messageId, requestedBy, requestUrl, mediaUrl } = context;
     try {
-        await Bot.sendPhoto(chatId, mediaUrl);
+        await Bot.sendPhoto(chatId, mediaUrl, reply_parameters={message_id:messageId,chat_id:chatId});
         // Log successful photo sending
         logMessage({
             type: LOG_TYPE.PHOTO,
@@ -209,6 +209,7 @@ const sendPhoto = async (context) => {
 const sendRequestedData = async (data) => {
     const {
         chatId,
+        messageId,
         requestedBy,
         requestUrl,
         caption,
@@ -221,6 +222,7 @@ const sendRequestedData = async (data) => {
 
     const userContext = {
         chatId,
+        messageId,
         requestedBy,
         requestUrl,
         message: caption,

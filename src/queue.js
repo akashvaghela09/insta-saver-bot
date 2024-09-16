@@ -58,6 +58,7 @@ const processQueue = async () => {
         } else {
             const newResponseData = new ContentResponse({
                 owner: { ...result.data?.owner },
+                messageId: currentJob.messageId,
                 requestedBy: { ...currentJob?.requestedBy },
                 requestUrl: currentJob?.requestUrl,
                 shortCode: currentJob?.shortCode,

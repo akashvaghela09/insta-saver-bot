@@ -4,6 +4,7 @@ const { REQUEST_STATUS } = require("../constants");
 const contentRequestSchema = new mongoose.Schema(
     {
         chatId: { type: String, required: true },
+        messageId: String,
         requestUrl: { type: String, required: true },
         requestedBy: {
             userName: String,
