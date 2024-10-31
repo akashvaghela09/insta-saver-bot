@@ -43,6 +43,7 @@ const MESSSAGE = {
 
 const REQUEST_STATUS = {
     PENDING: "PENDING",
+    PROCESSING: "PROCESSING",
     DONE: "DONE",
     FAILED: "FAILED",
 };

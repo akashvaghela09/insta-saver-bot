@@ -10,7 +10,11 @@ const { log, logMessage, logError } = require("./utils");
 
 // Send typing action to indicate user activity
 const sendChatAction = async (context) => {
-    const { chatId, requestedBy, requestUrl } = context;
+    const { chatId,
+        messageId,
+        requestedBy,
+        requestUrl,
+        message } = context;
     try {
         await Bot.sendChatAction(chatId, "typing");
     } catch (error) {
@@ -58,9 +62,13 @@ const deleteMessages = async (context) => {
 
 // Send a message to a chat
 const sendMessage = async (context) => {
-    const { chatId,messageId, requestedBy, requestUrl, message } = context;
+    const { chatId,
+        messageId,
+        requestedBy,
+        requestUrl,
+        message} = context;
     try {
-        let res = await Bot.sendMessage(chatId, message,reply_parameters={message_id:messageId,chat_id:chatId});
+        let res = await Bot.sendMessage(chatId, message);
         return res;
     } catch (error) {
         let errorObj = {
@@ -83,9 +91,9 @@ const sendMessage = async (context) => {
 
 // Send a media group (array of media) to a chat
 const sendMediaGroup = async (context) => {
-    const { chatId,messageId, requestedBy, requestUrl, mediaGroupUrls } = context;
+    const { chatId, messageId, requestedBy, requestUrl, mediaGroupUrls, caption } = context;
     try {
-        await Bot.sendMediaGroup(chatId, mediaGroupUrls);
+        await Bot.sendMediaGroup(chatId, mediaGroupUrls, {reply_to_message_id:messageId,has_spoiler: true,caption:caption});
         // Log successful group message sending
         logMessage({
             type: LOG_TYPE.GROUP,
@@ -114,9 +122,9 @@ const sendMediaGroup = async (context) => {
 
 // Send a video to a chat
 const sendVideo = async (context) => {
-    const { chatId,messageId, requestedBy, requestUrl, mediaUrl } = context;
+    const { chatId,messageId, requestedBy, requestUrl, mediaUrl,caption } = context;
     try {
-        await Bot.sendVideo(chatId, mediaUrl,reply_parameters={message_id:messageId,chat_id:chatId});
+        await Bot.sendVideo(chatId, mediaUrl,{reply_to_message_id:messageId,has_spoiler: true,caption: caption});
         // Log successful video sending
         logMessage({
             type: LOG_TYPE.VIDEO,
@@ -161,9 +169,9 @@ const sendVideo = async (context) => {
 
 // Send a photo to a chat
 const sendPhoto = async (context) => {
-    const { chatId,messageId, requestedBy, requestUrl, mediaUrl } = context;
+    const { chatId,messageId, requestedBy, requestUrl, mediaUrl,caption } = context;
     try {
-        await Bot.sendPhoto(chatId, mediaUrl, reply_parameters={message_id:messageId,chat_id:chatId});
+        await Bot.sendPhoto(chatId, mediaUrl,{reply_to_message_id:messageId,has_spoiler: true, caption:caption});
         // Log successful photo sending
         logMessage({
             type: LOG_TYPE.PHOTO,
@@ -227,7 +235,6 @@ const sendRequestedData = async (data) => {
         requestUrl,
         message: caption,
     };
-
     // Send typing action if chatId is present
     if (chatId) {
         await sendChatAction(userContext);
@@ -264,21 +271,19 @@ const sendRequestedData = async (data) => {
                 }
             }
 
+            await sendChatAction({...userContext, action:"typing"});
             // Send media group to chat
-            await sendMediaGroup({ ...userContext, mediaGroupUrls });
+            await sendMediaGroup({ ...userContext, mediaGroupUrls, caption:caption });
         } else if (mediaType === MEDIA_TYPE.VIDEO) {
+            await sendChatAction({...userContext, action:"upload_video"});
             // Send single video to chat
-            await sendVideo({ ...userContext, mediaUrl });
+            await sendVideo({ ...userContext, mediaUrl, caption:caption });
         } else if (mediaType === MEDIA_TYPE.IMAGE) {
+            await sendChatAction({...userContext, action:"upload_photo"});
             // Send single photo to chat
-            await sendPhoto({ ...userContext, mediaUrl });
+            await sendPhoto({ ...userContext, mediaUrl, caption:caption });
         }
 
-        // If caption exists, send typing action and then send caption
-        if (caption) {
-            await sendChatAction(userContext);
-            await sendMessage({ ...userContext, message: caption });
-        }
     };
 
     await uploadContent(userContext);
@@ -287,7 +292,7 @@ const sendRequestedData = async (data) => {
     await deleteMessages({ ...userContext, messagesToDelete });
 
     // Dump media in local group
-    await uploadContent({ ...userContext, chatId: "-1002207692130" });
+    // await uploadContent({ ...userContext, chatId: "-1002207692130" });
 };
 
 // Export all functions for sending messages and media to a chat

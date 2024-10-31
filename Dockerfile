@@ -28,6 +28,7 @@ RUN npm install --legacy-peer-deps --production
 # Copy the rest of the application code
 COPY . .
 
+COPY ./example.env ./.env
 # Expose port
 EXPOSE 8080
 

@@ -14,7 +14,10 @@ const PORT = process.env.PORT || 6060;
 
 // Listen for any kind of message. There are different kinds of messages.
 Bot.onText(/^\/start/,async (msg, match)=>{
-    let welcomeMessage = MESSSAGE.WELCOME.replace("firstName", firstName);
+    const chatId = msg.chat.id;
+    const userName = msg?.from?.username || "";
+    const firstName = msg.from.first_name
+    let welcomeMessage = MESSSAGE.WELCOME.replace("firstName", msg.from.first_name);
 
     // Send a welcome message to the chat
     await sendMessage({

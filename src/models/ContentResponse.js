@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const contentResponseSchema = new mongoose.Schema(
     {
+        chatId: { type: String, required: true },
         owner: {
             userName: String,
             avatarUrl: String,

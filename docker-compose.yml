@@ -35,6 +35,8 @@ services:
       - 6060:6060
     environment:
       MONGO_URI: mongodb://10.5.0.5:27017/insta
+    volumes:
+      - ./src/:/app/src
     networks:
       vpcbr:
         ipv4_address: 10.5.0.6
