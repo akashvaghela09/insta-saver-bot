@@ -34,6 +34,10 @@ const processQueue = async () => {
     processing = true;
     currentJob = queue.shift(); // Assign the job to currentJob
     log("job to process: ", currentJob);
+    await ContentRequest.findByIdAndUpdate(currentJob.id, {
+        status: REQUEST_STATUS.PROCESSING,
+        updatedAt: new Date(),
+    });
 
     try {
         if (!Browser.browserInstance) {
@@ -56,22 +60,24 @@ const processQueue = async () => {
                 $inc: { retryCount: currentJob.retryCount + 1 },
             });
         } else {
-            const newResponseData = new ContentResponse({
-                owner: { ...result.data?.owner },
-                requestedBy: { ...currentJob?.requestedBy },
-                requestUrl: currentJob?.requestUrl,
-                shortCode: currentJob?.shortCode,
-                updatedAt: new Date(),
-                mediaUrl: result.data?.mediaUrl,
-                mediaType: result.data?.mediaType,
-                captionText: result.data?.captionText,
-                displayUrl: result.data?.displayUrl,
-                thumbnailUrl: result.data?.thumbnailUrl,
-                videoUrl: result.data?.videoUrl,
-                mediaList: result.data?.mediaList,
-            });
+            // const newResponseData = new ContentResponse({
+            //     chatId: currentJob.chatId,
+            //     owner: { ...result.data?.owner },
+            //     messageId: currentJob.messageId,
+            //     requestedBy: { ...currentJob?.requestedBy },
+            //     requestUrl: currentJob?.requestUrl,
+            //     shortCode: currentJob?.shortCode,
+            //     updatedAt: new Date(),
+            //     mediaUrl: result.data?.mediaUrl,
+            //     mediaType: result.data?.mediaType,
+            //     captionText: result.data?.captionText,
+            //     displayUrl: result.data?.displayUrl,
+            //     thumbnailUrl: result.data?.thumbnailUrl,
+            //     videoUrl: result.data?.videoUrl,
+            //     mediaList: result.data?.mediaList,
+            // });
 
-            await newResponseData.save();
+            // await newResponseData.save();
 
             await waitFor(500);
 
@@ -79,11 +85,18 @@ const processQueue = async () => {
             await sendRequestedData({ ...result.data, ...currentJob });
 
             // Update request status on success and save response data
-            await ContentRequest.findByIdAndUpdate(currentJob.id, {
-                status: REQUEST_STATUS.DONE,
-                updatedAt: new Date(),
-                retryCount: currentJob.retryCount + 1,
-            });
+            // await ContentRequest.findByIdAndUpdate(currentJob.id, {
+            //     status: REQUEST_STATUS.DONE,
+            //     updatedAt: new Date(),
+            //     retryCount: currentJob.retryCount + 1,
+            // });
+
+            // Delete Doc on the successful request
+            await ContentRequest.findByIdAndDelete(currentJob.id);
+            log(
+                "Request doc deleted after successful response:",
+                currentJob.id
+            );
 
             logPendingCount();
         }
@@ -92,10 +105,10 @@ const processQueue = async () => {
     } finally {
         processing = false;
         currentJob = null; // Clear the current job after processing
-        log("process next item");
+        // log("process next item");
 
-        await waitFor(500);
-        await processQueue(); // Process the next job in the queue
+        // await waitFor(500);
+        // await processQueue(); // Process the next job in the queue
     }
 };
 
@@ -124,9 +137,9 @@ const addToQueue = async (data) => {
     queue.push(data);
 
     log("!processing ", !processing);
-    if (!processing) {
-        processQueue();
-    }
+    // if (!processing) {
+    //     processQueue();
+    // }
 };
 
 // Fetch pending requests from the database and add them to the queue
@@ -147,6 +160,7 @@ const fetchPendingRequests = async () => {
         pendingRequests.forEach((request) => {
             queue.push({
                 id: request._id.toString(),
+                messageId: request.messageId,
                 shortCode: request.shortCode,
                 requestUrl: request.requestUrl,
                 requestedBy: request.requestedBy,
@@ -184,6 +198,7 @@ const initQueue = async () => {
                 if (queue.length === 0) {
                     addToQueue({
                         id: newRequest._id.toString(),
+                        messageId: newRequest.messageId,
                         shortCode: newRequest.shortCode,
                         requestUrl: newRequest.requestUrl,
                         requestedBy: newRequest.requestedBy,
@@ -197,9 +212,7 @@ const initQueue = async () => {
 
         // Periodically synchronize the queue with the database
         setInterval(fetchPendingRequests, 60000); // Adjust the interval as needed
-
-        log("process queue after fetching pending request");
-        await processQueue();
+        setInterval(processQueue, 10000);
     } catch (error) {
         log("Error initializing queue: ", error);
     }

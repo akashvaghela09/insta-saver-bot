@@ -21,16 +21,16 @@ const isValidInstaUrl = (url) => {
             return response;
         }
 
-        let shortCode = pathname.trim().split("/")[2];
-
-        if (shortCode?.length === 11) {
+        [type, shortCode] = pathname.trim().split("/").slice(1, 3);
+        log("share link type is: " + type);
+        if (type === "stories" || shortCode?.length === 11) {
             return {
                 url: url,
                 shortCode,
                 success: true,
             };
         }
-
+        log(response);
         return response;
     } catch (error) {
         log("error in isValid : ", error);
