@@ -8,6 +8,7 @@ const ContentRequest = require("./models/ContentRequest");
 const { MESSSAGE } = require("./constants");
 const { sendMessage } = require("./telegramActions");
 const { isValidInstaUrl } = require("./utils/helper");
+const { addOrUpdateUser } = require("./utils/addOrUpdateUser");
 
 // Set the server to listen on port 6060
 const PORT = process.env.PORT || 6060;
@@ -61,6 +62,8 @@ Bot.onText(/^https:\/\/www\.instagram\.com(.+)/, async (msg, match) => {
         try {
             // Save the request to the database
             await newRequest.save();
+
+            await addOrUpdateUser(chatId, userName, firstName);
         } catch (error) {
             log("Error saving content request:", error);
         }

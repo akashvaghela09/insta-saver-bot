@@ -5,6 +5,7 @@ const { log, waitFor } = require("./utils");
 const { sendRequestedData } = require("./telegramActions");
 const { Browser } = require("./config");
 const { scrapWithFastDl } = require("./apis");
+const Metrics = require("./models/Metrics");
 
 // Initialize BullMQ queue
 const requestQueue = new Queue("contentRequestQueue", {
@@ -59,6 +60,18 @@ const requestWorker = new Worker(
                 // Delete document after successful processing
                 await ContentRequest.findByIdAndDelete(id);
                 log(`Request document deleted: ${id}`);
+
+                await Metrics.findOneAndUpdate(
+                    {},
+                    {
+                        $inc: {
+                            totalRequests: 1,
+                            [`mediaProcessed.${result.data?.mediaType}`]: 1,
+                        },
+                        $set: { lastUpdated: new Date() },
+                    },
+                    { upsert: true, new: true }
+                );
             }
         } catch (error) {
             log(`Error processing job ${id}:`, error);
