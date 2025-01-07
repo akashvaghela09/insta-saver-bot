@@ -1,164 +1,121 @@
+const { Queue, Worker, QueueEvents } = require("bullmq");
 const { REQUEST_STATUS, MESSSAGE } = require("./constants");
 const ContentRequest = require("./models/ContentRequest");
-const ContentResponse = require("./models/ContentResponse");
 const { log, waitFor } = require("./utils");
-
 const { sendRequestedData } = require("./telegramActions");
 const { Browser } = require("./config");
 const { scrapWithFastDl } = require("./apis");
 
-let queue = [];
-let processing = false;
-let currentJob = null; // Variable to store the current job being processed
-const QUEUE_LIMIT = 5; // Maximum number of items in the queue
+// Initialize BullMQ queue
+const requestQueue = new Queue("contentRequestQueue", {
+    connection: {
+        host: "localhost",
+        port: 6379,
+    },
+});
 
-const logPendingCount = async () => {
-    // Count remaining pending requests
-    const pendingCount = await ContentRequest.countDocuments({
-        status: REQUEST_STATUS.PENDING,
-        retryCount: { $lt: 5 },
-    });
-    log("Remaining items in queue:", pendingCount);
-};
+// Process the queue using a Worker
+const requestWorker = new Worker(
+    "contentRequestQueue",
+    async (job) => {
+        const { id, requestUrl, retryCount } = job.data;
 
-// Process the queue of content requests
-const processQueue = async () => {
-    log("processQueue run -----------------");
-    if (processing || queue.length === 0) {
-        log("queue stopped processing ----------------");
-        log("processing ", processing);
-        log("queue length ", queue.length);
-        return;
-    }
+        log(`Processing job: ${id}`);
 
-    processing = true;
-    currentJob = queue.shift(); // Assign the job to currentJob
-    log("job to process: ", currentJob);
-    await ContentRequest.findByIdAndUpdate(currentJob.id, {
-        status: REQUEST_STATUS.PROCESSING,
-        updatedAt: new Date(),
-    });
+        // Mark the job as PROCESSING in the database
+        await ContentRequest.findByIdAndUpdate(id, {
+            status: REQUEST_STATUS.PROCESSING,
+            updatedAt: new Date(),
+        });
 
-    try {
-        if (!Browser.browserInstance) {
-            console.log("seems like browser was closed");
-            await Browser.Open();
-        }
+        try {
+            if (!Browser.browserInstance) {
+                console.log("Browser instance not found, reopening...");
+                await Browser.Open();
+            }
 
-        let result = await scrapWithFastDl(currentJob.requestUrl);
+            const result = await scrapWithFastDl(requestUrl);
 
-        log(MESSSAGE.DOWNLOADING.replace("requestUrl", currentJob.requestUrl));
+            if (!result.success) {
+                const newRetryCount = retryCount + 1;
+                const newStatus =
+                    newRetryCount < 5
+                        ? REQUEST_STATUS.PENDING
+                        : REQUEST_STATUS.FAILED;
 
-        if (!result.success) {
-            console.log("failed the scrap request");
-            let retryCount = currentJob.retryCount + 1;
-            let newStatus =
-                retryCount < 5 ? REQUEST_STATUS.PENDING : REQUEST_STATUS.FAILED;
+                await ContentRequest.findByIdAndUpdate(id, {
+                    $set: { updatedAt: new Date(), status: newStatus },
+                    $inc: { retryCount: 1 },
+                });
 
-            await ContentRequest.findByIdAndUpdate(currentJob.id, {
+                log(`Job ${id} failed. Retry count: ${newRetryCount}`);
+                throw new Error("Scraping failed"); // Propagate error for retry
+            } else {
+                await waitFor(500);
+
+                // Send requested data
+                await sendRequestedData({ ...result.data, ...job.data });
+
+                // Delete document after successful processing
+                await ContentRequest.findByIdAndDelete(id);
+                log(`Request document deleted: ${id}`);
+            }
+        } catch (error) {
+            log(`Error processing job ${id}:`, error);
+
+            // On failure, ensure job status is updated for retry
+            const newRetryCount = retryCount + 1;
+            const newStatus =
+                newRetryCount < 5
+                    ? REQUEST_STATUS.PENDING
+                    : REQUEST_STATUS.FAILED;
+
+            await ContentRequest.findByIdAndUpdate(id, {
                 $set: { updatedAt: new Date(), status: newStatus },
-                $inc: { retryCount: currentJob.retryCount + 1 },
+                $inc: { retryCount: 1 },
             });
-        } else {
-            // const newResponseData = new ContentResponse({
-            //     chatId: currentJob.chatId,
-            //     owner: { ...result.data?.owner },
-            //     messageId: currentJob.messageId,
-            //     requestedBy: { ...currentJob?.requestedBy },
-            //     requestUrl: currentJob?.requestUrl,
-            //     shortCode: currentJob?.shortCode,
-            //     updatedAt: new Date(),
-            //     mediaUrl: result.data?.mediaUrl,
-            //     mediaType: result.data?.mediaType,
-            //     captionText: result.data?.captionText,
-            //     displayUrl: result.data?.displayUrl,
-            //     thumbnailUrl: result.data?.thumbnailUrl,
-            //     videoUrl: result.data?.videoUrl,
-            //     mediaList: result.data?.mediaList,
-            // });
 
-            // await newResponseData.save();
-
-            await waitFor(500);
-
-            // Send requested data to the user
-            await sendRequestedData({ ...result.data, ...currentJob });
-
-            // Update request status on success and save response data
-            // await ContentRequest.findByIdAndUpdate(currentJob.id, {
-            //     status: REQUEST_STATUS.DONE,
-            //     updatedAt: new Date(),
-            //     retryCount: currentJob.retryCount + 1,
-            // });
-
-            // Delete Doc on the successful request
-            await ContentRequest.findByIdAndDelete(currentJob.id);
             log(
-                "Request doc deleted after successful response:",
-                currentJob.id
+                `Updated request ${id} for retry. Retry count: ${newRetryCount}`
             );
-
-            logPendingCount();
         }
-    } catch (error) {
-        log("Error processing job:", error);
-    } finally {
-        processing = false;
-        currentJob = null; // Clear the current job after processing
-        // log("process next item");
-
-        // await waitFor(500);
-        // await processQueue(); // Process the next job in the queue
+    },
+    {
+        connection: {
+            host: "localhost",
+            port: 6379,
+        },
+        concurrency: 5, // Limit concurrency
     }
-};
+);
 
-// Add a new content request to the queue
-const addToQueue = async (data) => {
-    const { shortCode, chatId } = data;
+// Log job events using QueueEvents
+const queueEvents = new QueueEvents("contentRequestQueue", {
+    connection: {
+        host: "localhost",
+        port: 6379,
+    },
+});
 
-    // Check if the request is already in the queue
-    const isInQueue = queue.some(
-        (item) => item.shortCode === shortCode && item.chatId === chatId
-    );
+queueEvents.on("completed", ({ jobId }) => {
+    log(`Job ${jobId} completed successfully.`);
+});
 
-    // Check if the request is currently being processed
-    const isProcessing =
-        currentJob &&
-        currentJob.shortCode === shortCode &&
-        currentJob.chatId === chatId;
+queueEvents.on("failed", ({ jobId, failedReason }) => {
+    log(`Job ${jobId} failed: ${failedReason}`);
+});
 
-    if (isInQueue || isProcessing) {
-        log(
-            `Request with shortCode ${shortCode} and chatId ${chatId} is already in the queue or being processed.`
-        );
-        return;
-    }
-
-    queue.push(data);
-
-    log("!processing ", !processing);
-    // if (!processing) {
-    //     processQueue();
-    // }
-};
-
-// Fetch pending requests from the database and add them to the queue
+// Fetch pending requests from MongoDB and add them to the queue
 const fetchPendingRequests = async () => {
     try {
         const pendingRequests = await ContentRequest.find({
             status: REQUEST_STATUS.PENDING,
             retryCount: { $lt: 5 },
-        })
-            .sort({ requestedAt: 1 })
-            .limit(QUEUE_LIMIT);
-        log("Fetched pending requests: ", pendingRequests.length);
+        }).sort({ requestedAt: 1 });
 
-        // Clear the current queue
-        queue = [];
-
-        // Add each pending request to the queue
-        pendingRequests.forEach((request) => {
-            queue.push({
+        log(`Fetched ${pendingRequests.length} pending requests from DB.`);
+        for (const request of pendingRequests) {
+            await requestQueue.add("contentRequest", {
                 id: request._id.toString(),
                 messageId: request.messageId,
                 shortCode: request.shortCode,
@@ -167,56 +124,42 @@ const fetchPendingRequests = async () => {
                 retryCount: request.retryCount,
                 chatId: request.chatId,
             });
-        });
-
-        log("Queue updated with fresh pending requests.", queue.length);
-        logPendingCount();
-
-        await waitFor(500);
-        await processQueue();
+        }
     } catch (error) {
         log("Error fetching pending requests:", error);
     }
 };
 
-// Initialize the queue with pending content requests from the database
+// Initialize the queue and MongoDB change stream
 const initQueue = async () => {
     try {
         await fetchPendingRequests();
-        log("Queue initialized with pending requests");
+        log("Queue initialized with pending requests.");
 
-        // Set up a watcher for new content requests in MongoDB
+        // Watch MongoDB for new requests
         const changeStream = ContentRequest.watch();
         changeStream.on("change", async (change) => {
             if (change.operationType === "insert") {
-                console.log(
-                    "got new request ========================================="
-                );
                 const newRequest = change.fullDocument;
+                log("New request detected:", newRequest._id);
 
-                // Only add request if queue is empty, otherwise wait for queue to complete
-                if (queue.length === 0) {
-                    addToQueue({
-                        id: newRequest._id.toString(),
-                        messageId: newRequest.messageId,
-                        shortCode: newRequest.shortCode,
-                        requestUrl: newRequest.requestUrl,
-                        requestedBy: newRequest.requestedBy,
-                        retryCount: newRequest.retryCount,
-                        chatId: newRequest.chatId,
-                    });
-                }
-                log("New request added to the queue:", newRequest._id);
+                await requestQueue.add("contentRequest", {
+                    id: newRequest._id.toString(),
+                    messageId: newRequest.messageId,
+                    shortCode: newRequest.shortCode,
+                    requestUrl: newRequest.requestUrl,
+                    requestedBy: newRequest.requestedBy,
+                    retryCount: newRequest.retryCount,
+                    chatId: newRequest.chatId,
+                });
             }
         });
 
-        // Periodically synchronize the queue with the database
-        setInterval(fetchPendingRequests, 60000); // Adjust the interval as needed
-        setInterval(processQueue, 10000);
+        // Periodically synchronize pending requests
+        setInterval(fetchPendingRequests, 60000); // Every 60 seconds
     } catch (error) {
-        log("Error initializing queue: ", error);
+        log("Error initializing queue:", error);
     }
 };
 
-// Export functions for adding to the queue and initializing it
 module.exports = { initQueue };
