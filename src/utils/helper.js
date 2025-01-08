@@ -21,20 +21,35 @@ const isValidInstaUrl = (url) => {
             return response;
         }
 
-        [type, shortCode] = pathname.trim().split("/").slice(1, 3);
+        const pathSegments = pathname.trim().split("/").filter(Boolean); // Removes empty segments
+        const [type, shortCode] = pathSegments;
+
         log("share link type is: " + type);
-        if (type === "stories" || shortCode?.length === 11) {
+
+        if (type === "stories") {
+            // Ensure it's a valid stories URL with at least three path segments
+            if (pathSegments.length >= 3) {
+                const storyId = pathSegments[2]; // Extract the actual story ID
+                return {
+                    url,
+                    shortCode: storyId,
+                    success: true,
+                };
+            }
+        } else if (shortCode?.length === 11) {
+            // For other types like posts (e.g., /p/)
             return {
-                url: url,
+                url,
                 shortCode,
                 success: true,
             };
         }
+
         log(response);
         return response;
     } catch (error) {
-        log("error in isValid : ", error);
-        log("caused by : ", url);
+        log("error in isValid: ", error);
+        log("caused by: ", url);
         return response;
     }
 };
