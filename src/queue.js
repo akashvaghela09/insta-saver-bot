@@ -1,5 +1,5 @@
 const { Queue, Worker, QueueEvents } = require("bullmq");
-const { REQUEST_STATUS, MESSSAGE } = require("./constants");
+const { REQUEST_STATUS } = require("./constants");
 const ContentRequest = require("./models/ContentRequest");
 const { log, waitFor } = require("./utils");
 const { sendRequestedData } = require("./telegramActions");
@@ -30,11 +30,6 @@ const requestWorker = new Worker(
         });
 
         try {
-            if (!Browser.browserInstance) {
-                console.log("Browser instance not found, reopening...");
-                await Browser.Open();
-            }
-
             const result = await scrapWithFastDl(requestUrl);
 
             if (!result.success) {

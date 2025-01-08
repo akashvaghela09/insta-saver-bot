@@ -104,7 +104,6 @@ const getMediaUrl = async (instagramUrl) => {
 };
 
 const scrapWithFastDl = async (requestUrl) => {
-    const browser = Browser.browserInstance;
     let page;
     const finalResponse = {
         data: {},
@@ -112,7 +111,7 @@ const scrapWithFastDl = async (requestUrl) => {
     };
 
     try {
-        page = await browser.newPage();
+        page = await Browser.getPage();
 
         if (requestUrl.includes("/stories/")) {
             await page.goto("https://fastdl.app/story-saver");
@@ -226,8 +225,10 @@ const scrapWithFastDl = async (requestUrl) => {
     } catch (error) {
         console.error("Error in scraping:", error);
     } finally {
-        await page.close();
-        console.log("Page closed after scraping");
+        if (page) {
+            await Browser.releasePage(page);
+            log("Page closed/released after scraping");
+        }
     }
 
     return finalResponse;

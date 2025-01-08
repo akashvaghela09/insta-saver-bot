@@ -32,8 +32,6 @@ class Browser {
                 log("Error launching browser:", error);
             }
         }
-
-        return this.browserInstance;
     }
 
     static async Close() {
@@ -41,6 +39,26 @@ class Browser {
             await this.browserInstance.close();
             this.browserInstance = null;
             log("Browser closed successfully");
+        }
+    }
+
+    static async getPage() {
+        if (!this.browserInstance) {
+            log("Browser instance not found, reopening...");
+            await this.Open();
+        }
+
+        log("Creating a new page");
+        const page = await this.browserInstance.newPage();
+        return page;
+    }
+
+    static async releasePage(page) {
+        try {
+            await page.close();
+            log("Page Closed / Released successfully");
+        } catch (error) {
+            log("Error releasing page:", error);
         }
     }
 
@@ -107,8 +125,10 @@ class Browser {
         } catch (error) {
             log("Error checking authentication:", error);
         } finally {
-            await page.close();
-            log("Page closed after checking auth");
+            if (page) {
+                await Browser.releasePage(page);
+                log("Page closed/released");
+            }
         }
     }
 
