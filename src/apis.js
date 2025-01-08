@@ -149,7 +149,7 @@ const scrapWithFastDl = async (requestUrl) => {
                 finalResponse.data.caption = captionText.trim();
             }
         } catch (error) {
-            console.log("failed to scrap caption: ", error);
+            log("failed to scrap caption | request url: ", requestUrl);
         }
 
         try {
