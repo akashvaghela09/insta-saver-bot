@@ -30,11 +30,16 @@ const isValidInstaUrl = (url) => {
             // Ensure it's a valid stories URL with at least three path segments
             if (pathSegments.length >= 3) {
                 const storyId = pathSegments[2]; // Extract the actual story ID
+                // return {
+                //     url,
+                //     shortCode: storyId,
+                //     success: true,
+                // };
+
+                //TODO: will support stories in the future after proper testing
                 return {
-                    url,
-                    shortCode: storyId,
-                    success: true,
-                };
+                    success: false
+                }
             }
         } else if (shortCode?.length === 11) {
             // For other types like posts (e.g., /p/)
