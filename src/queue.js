@@ -3,7 +3,6 @@ const { REQUEST_STATUS } = require("./constants");
 const ContentRequest = require("./models/ContentRequest");
 const { log, waitFor } = require("./utils");
 const { sendRequestedData } = require("./telegramActions");
-const { Browser } = require("./config");
 const { scrapWithFastDl } = require("./apis");
 const Metrics = require("./models/Metrics");
 
@@ -14,6 +13,19 @@ const requestQueue = new Queue("contentRequestQueue", {
         port: 6379,
     },
 });
+
+// Function to clear the queue
+const clearQueue = async () => {
+    try {
+        log("Clearing existing jobs in the queue...");
+        await requestQueue.drain(); // Empties waiting and active jobs
+        await requestQueue.clean(0, "completed"); // Removes completed jobs
+        await requestQueue.clean(0, "failed"); // Removes failed jobs
+        log("Queue cleared.");
+    } catch (error) {
+        log("Error clearing queue:", error);
+    }
+};
 
 // Process the queue using a Worker
 const requestWorker = new Worker(
@@ -34,18 +46,22 @@ const requestWorker = new Worker(
 
             if (!result.success) {
                 const newRetryCount = retryCount + 1;
-                const newStatus =
-                    newRetryCount < 5
-                        ? REQUEST_STATUS.PENDING
-                        : REQUEST_STATUS.FAILED;
 
-                await ContentRequest.findByIdAndUpdate(id, {
-                    $set: { updatedAt: new Date(), status: newStatus },
-                    $inc: { retryCount: 1 },
-                });
+                if (newRetryCount <= 5) {
+                    await ContentRequest.findByIdAndUpdate(id, {
+                        $set: {
+                            updatedAt: new Date(),
+                            status: REQUEST_STATUS.PENDING,
+                        },
+                        $inc: { retryCount: 1 },
+                    });
+                } else {
+                    await ContentRequest.findByIdAndDelete(id);
+                    log(`Request document deleted: ${id}`);
+                }
 
                 log(`Job ${id} failed. Retry count: ${newRetryCount}`);
-                throw new Error("Scraping failed"); // Propagate error for retry
+                log("Scraping failed");
             } else {
                 await waitFor(500);
 
@@ -71,17 +87,21 @@ const requestWorker = new Worker(
         } catch (error) {
             log(`Error processing job ${id}:`, error);
 
-            // On failure, ensure job status is updated for retry
             const newRetryCount = retryCount + 1;
-            const newStatus =
-                newRetryCount < 5
-                    ? REQUEST_STATUS.PENDING
-                    : REQUEST_STATUS.FAILED;
 
-            await ContentRequest.findByIdAndUpdate(id, {
-                $set: { updatedAt: new Date(), status: newStatus },
-                $inc: { retryCount: 1 },
-            });
+
+            if (newRetryCount <= 5) {
+                await ContentRequest.findByIdAndUpdate(id, {
+                    $set: {
+                        updatedAt: new Date(),
+                        status: REQUEST_STATUS.PENDING,
+                    },
+                    $inc: { retryCount: 1 },
+                });
+            } else {
+                await ContentRequest.findByIdAndDelete(id);
+                log(`Request document deleted: ${id}`);
+            }
 
             log(
                 `Updated request ${id} for retry. Retry count: ${newRetryCount}`
@@ -93,7 +113,7 @@ const requestWorker = new Worker(
             host: "localhost",
             port: 6379,
         },
-        concurrency: 5, // Limit concurrency
+        concurrency: 5,
     }
 );
 
@@ -116,6 +136,13 @@ queueEvents.on("failed", ({ jobId, failedReason }) => {
 // Fetch pending requests from MongoDB and add them to the queue
 const fetchPendingRequests = async () => {
     try {
+        const existingJobs = await requestQueue.getJobs([
+            "waiting",
+            "delayed",
+            "active",
+        ]);
+        const existingJobIds = new Set(existingJobs.map((job) => job.data.id));
+
         const pendingRequests = await ContentRequest.find({
             status: REQUEST_STATUS.PENDING,
             retryCount: { $lt: 5 },
@@ -123,15 +150,17 @@ const fetchPendingRequests = async () => {
 
         log(`Fetched ${pendingRequests.length} pending requests from DB.`);
         for (const request of pendingRequests) {
-            await requestQueue.add("contentRequest", {
-                id: request._id.toString(),
-                messageId: request.messageId,
-                shortCode: request.shortCode,
-                requestUrl: request.requestUrl,
-                requestedBy: request.requestedBy,
-                retryCount: request.retryCount,
-                chatId: request.chatId,
-            });
+            if (!existingJobIds.has(request._id.toString())) {
+                await requestQueue.add("contentRequest", {
+                    id: request._id.toString(),
+                    messageId: request.messageId,
+                    shortCode: request.shortCode,
+                    requestUrl: request.requestUrl,
+                    requestedBy: request.requestedBy,
+                    retryCount: request.retryCount,
+                    chatId: request.chatId,
+                });
+            }
         }
     } catch (error) {
         log("Error fetching pending requests:", error);
@@ -141,10 +170,10 @@ const fetchPendingRequests = async () => {
 // Initialize the queue and MongoDB change stream
 const initQueue = async () => {
     try {
-        await fetchPendingRequests();
+        await clearQueue(); // Clear the queue on start
+        await fetchPendingRequests(); // Load pending requests
         log("Queue initialized with pending requests.");
 
-        // Watch MongoDB for new requests
         const changeStream = ContentRequest.watch();
         changeStream.on("change", async (change) => {
             if (change.operationType === "insert") {
@@ -163,8 +192,14 @@ const initQueue = async () => {
             }
         });
 
-        // Periodically synchronize pending requests
-        setInterval(fetchPendingRequests, 60000); // Every 60 seconds
+        setInterval(fetchPendingRequests, 60000); // Periodic sync every 60 seconds
+
+        // Periodically clean completed/failed jobs
+        setInterval(async () => {
+            await requestQueue.clean(3600 * 1000, "completed"); // Clean jobs older than 1 hour
+            await requestQueue.clean(3600 * 1000, "failed"); // Clean failed jobs older than 1 hour
+            log("Cleaned up old jobs from the queue.");
+        }, 60000); // Every minute
     } catch (error) {
         log("Error initializing queue:", error);
     }
