@@ -4,6 +4,8 @@
 
 <h1 align="center">Insta Saver Bot 🤖</h1>
 
+<p style="color: red">Note: the project is no longer supported and the bot is not live at the moment</p>
+
 ### Description
 
 The Insta Saver Bot is a versatile tool (Telegram bot) designed to simplify the process of downloading Instagram content. Leveraging reverse engineering of Instagram's API, this bot can fetch various types of content, including Reels, regular posts, and images. It not only retrieves the content but also preserves the original captions. Additionally, the bot supports carousal posts with multiple items, enhancing its functionality for a seamless user experience.
